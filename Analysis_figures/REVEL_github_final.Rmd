@@ -1,0 +1,575 @@
+---
+title: "Untitled"
+author: "Malvika Tejura"
+date: "2024-03-07"
+output: html_document
+---
+
+```{r}
+
+##Run this script to generate analyses for variants that are in trending concordant, trending discordant, or insufficient variants intervals for. 
+
+##be sure to add three files to run this script with the correct directory: clinvar_wg = add Supplementary Table 1 file here and clinvar 23 = add Supplementary Table 2 or Table 3 file here depending on whether you want the analysis with or without training variants, VUS = add Supplementary Table 4 file here
+
+##at the very end of the code, please input the file name and directory you want the pdf to save to. The pdf consists of the stacked bar plots from Figure 2 or Figure S1 and donut plots from Figure 5 or Figure S3. 
+
+#load relevant packages
+library('dplyr')
+library('readxl')
+library('ggplot2')
+library('tidyverse')
+library('ggpubr')
+library('cowplot')
+library('ggrepel')
+library('purrr')
+library('ggpattern')
+
+#create dataframes from the data supplemented from the paper 
+
+clinvar_wg = read.csv('ClinGen SVI Calibration Dataset Supplementary Table 1')
+
+#change datatype of REVEL scores to numeric from clinvar_wg dataframe
+
+clinvar_wg$REVEL_score = as.numeric(as.character(clinvar_wg$REVEL_score))
+
+#create dataframes from annotated and parsed csv file 
+
+clinvar23 = read.csv('Clinvar 2023 Dataset Supplementary Table 2 or Clinvar 2023 Dataset without training variants Supplementary Table 3')
+
+#load the VUS file into a dataframe 
+
+VUS = read_csv('Clinvar 2023 Dataset only VUS Supplementary Table 4')
+
+#create a dataframe with only unique genes from the clinvar23 dataframe (used later in code)
+
+clinvar23_unique_Gene = clinvar23 %>% distinct(Gene, .keep_all = TRUE)
+
+#change datatype of REVEL and BayesDel scores form clinvar23 dataframe to numeric
+
+clinvar23$REVEL = as.numeric(as.character(clinvar23$REVEL))
+clinvar23$BayesDel_noAF_score = as.numeric(as.character(clinvar23$BayesDel_noAF_score))
+
+#create functions to find percentage of incorrectly predicted variants in each evidence strength interval
+
+#for clivnar_wg dataframe 
+
+path_missclassified = function(df) {
+  pathogenic = nrow(filter(df, df$clnsig == 'Pathogenic' | df$clnsig == 'Likely_pathogenic' | df$clnsig == 'Pathogenic/Likely_pathogenic'))
+  benign = nrow(filter(df, df$clnsig == 'Benign' | df$clnsig == 'Likely_benign' | df$clnsig == 'Benign/Likely_benign'))
+  proportion = benign/(pathogenic + benign)
+  return(proportion)
+}
+
+ben_missclassified = function(df) {
+  pathogenic = nrow(filter(df, df$clnsig == 'Pathogenic' | df$clnsig == 'Likely_pathogenic' | df$clnsig == 'Pathogenic/Likely_pathogenic'))
+  benign = nrow(filter(df, df$clnsig == 'Benign' | df$clnsig == 'Likely_benign' | df$clnsig == 'Benign/Likely_benign'))
+  proportion = pathogenic/(benign + pathogenic)
+  return(proportion)
+}
+
+#for clinvar23 dataframe 
+
+path_missclassified_2 = function(df) {
+  pathogenic = nrow(filter(df, df$Significance == 'Pathogenic' | df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
+  benign = nrow(filter(df, df$Significance == 'Benign' | df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
+  proportion = benign/(pathogenic + benign)
+  return(proportion)
+}
+
+ben_missclassified_2 = function(df) {
+  pathogenic = nrow(filter(df, df$Significance == 'Pathogenic' | df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
+  benign = nrow(filter(df, df$Significance == 'Benign' | df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
+  proportion = pathogenic/(benign + pathogenic)
+  return(proportion)
+}
+
+#find the percentage of misclassified variants in each bin from the clinvar_wg dataset for REVEL. This is the incorrect prediction tolerance. Also calculate the number of variants needed in each interval to be concordant or discordant using the binomial theorem
+
+strong_pathogenic_percentage = path_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score >= 0.932))
+strong_path_x_pass = ceiling(log(0.2)/log(1-strong_pathogenic_percentage))
+strong_path_x_fail = ceiling(log(0.2)/log(strong_pathogenic_percentage))
+print(strong_path_x_pass)
+
+                      
+moderate_pathogenic_percentage = path_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score < 0.932 & clinvar_wg$REVEL_score >= 0.773))
+moderate_path_x_pass = ceiling(log(0.2)/log(1-moderate_pathogenic_percentage))
+moderate_path_x_fail = ceiling(log(0.2)/log(moderate_pathogenic_percentage))
+print(moderate_path_x_pass)
+
+
+supporting_pathogenic_percentage = path_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score < 0.773 & clinvar_wg$REVEL_score >= 0.644))
+supporting_path_x_pass = ceiling(log(0.2)/log(1-supporting_pathogenic_percentage))
+supporting_path_x_fail = ceiling(log(0.2)/log(supporting_pathogenic_percentage))
+
+very_strong_benign_percentage = ben_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score <= 0.003))
+very_strong_ben_x_pass = ceiling(log(0.2)/log(1-very_strong_benign_percentage))
+very_strong_ben_x_fail = ceiling(log(0.2)/log(very_strong_benign_percentage))
+
+strong_benign_percentage = ben_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score > 0.003 & clinvar_wg$REVEL_score <= 0.016))
+strong_ben_x_pass = ceiling(log(0.2)/log(1-strong_benign_percentage))
+strong_ben_x_fail = ceiling(log(0.2)/log(strong_benign_percentage))
+
+moderate_benign_percentage = ben_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score > 0.016 & clinvar_wg$REVEL_score <= 0.183))
+moderate_ben_x_pass = ceiling(log(0.2)/log(1-moderate_benign_percentage))
+moderate_ben_x_fail = ceiling(log(0.2)/log(moderate_benign_percentage))
+
+supporting_benign_percentage = ben_missclassified(filter(clinvar_wg, clinvar_wg$REVEL_score > 0.183 & clinvar_wg$REVEL_score <= 0.290))
+supporting_ben_x_pass = ceiling(log(0.2)/log(1-supporting_benign_percentage))
+supporting_ben_x_fail = ceiling(log(0.2)/log(supporting_benign_percentage))
+
+#functions to determine if a certain interval in a gene is concordant or discordant depending on the incorrect prediction percentage
+
+pass_fail_path = function(df,bin) {
+  p_f = path_missclassified_2(df)
+  if (p_f > bin) {
+    pass_fail = 'Discordant'
+  } else if (p_f <= bin) {
+    pass_fail = 'Concordant'
+  }
+  df$pass_fail = pass_fail
+  df$control_variants = nrow(df)
+  df$misclassified = nrow(filter(df, df$Significance == 'Benign'| df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
+  return(df)
+}
+
+pass_fail_ben = function(df,bin) {
+  p_f = ben_missclassified_2(df)
+  if (p_f > bin) {
+    pass_fail = 'Discordant'
+  } else if (p_f <= bin) {
+    pass_fail = 'Concordant'
+  }
+  df$pass_fail = pass_fail
+  df$control_variants = nrow(df)
+  df$misclassified = nrow(filter(df, df$Significance == 'Pathogenic'| df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
+  return(df)
+}
+
+
+#create dataframes for each evidence strength interval with a pass/fail column depending on the intervals incorrect prediction percentage (pass = incorrect prediction percentage <= incorrect prediction tolerance, fail = incorrect prediction percentage > incorrect prediction tolerance)
+
+#strong pathogenic
+strong_pathogenic = filter(clinvar23, clinvar23$REVEL >= 0.932)
+strong_pathogenic = strong_pathogenic %>% group_by(Gene) %>% group_modify(~pass_fail_path(.,strong_pathogenic_percentage))
+colnames(strong_pathogenic)[18] = 'pass_fail_strong_pathogenic'
+colnames(strong_pathogenic)[19] = 'control_variants_strong_pathogenic'
+colnames(strong_pathogenic)[20] = 'misclassified_variants_strong_pathogenic'
+
+#moderate pathogenic
+moderate_pathogenic = filter(clinvar23, clinvar23$REVEL < 0.932 & clinvar23$REVEL >= 0.773)
+moderate_pathogenic = moderate_pathogenic %>% group_by(Gene) %>% group_modify(~pass_fail_path(.,moderate_pathogenic_percentage))
+colnames(moderate_pathogenic)[18] = 'pass_fail_moderate_pathogenic'
+colnames(moderate_pathogenic)[19] = 'control_variants_moderate_pathogenic'
+colnames(moderate_pathogenic)[20] = 'misclassified_variants_moderate_pathogenic'
+
+#supporting pathogenic
+supporting_pathogenic = filter(clinvar23, clinvar23$REVEL < 0.773 & clinvar23$REVEL >= 0.644)
+supporting_pathogenic = supporting_pathogenic %>% group_by(Gene) %>% group_modify(~pass_fail_path(.,supporting_pathogenic_percentage))
+colnames(supporting_pathogenic)[18] = 'pass_fail_supporting_pathogenic'
+colnames(supporting_pathogenic)[19] = 'control_variants_supporting_pathogenic'
+colnames(supporting_pathogenic)[20] = 'misclassified_variants_supporting_pathogenic'
+
+#very strong benign
+
+very_strong_benign = filter(clinvar23, clinvar23$REVEL <= 0.003)
+very_strong_benign = very_strong_benign %>% group_by(Gene) %>% group_modify((~pass_fail_ben(.,very_strong_benign_percentage)))
+colnames(very_strong_benign)[18] = 'pass_fail_very_strong_benign'
+colnames(very_strong_benign)[19] = 'control_variants_very_strong_benign'
+colnames(very_strong_benign)[20] = 'misclassified_variants_very_strong_benign'
+
+#strong benign
+
+strong_benign = filter(clinvar23, clinvar23$REVEL > 0.003 & clinvar23$REVEL <= 0.016)
+strong_benign = strong_benign %>% group_by(Gene) %>% group_modify((~pass_fail_ben(.,strong_benign_percentage)))
+colnames(strong_benign)[18] = 'pass_fail_strong_benign'
+colnames(strong_benign)[19] = 'control_variants_strong_benign'
+colnames(strong_benign)[20] = 'misclassified_variants_strong_benign'
+
+#moderate benign
+
+moderate_benign = filter(clinvar23, clinvar23$REVEL > 0.016 & clinvar23$REVEL <= 0.183)
+moderate_benign = moderate_benign %>% group_by(Gene) %>% group_modify((~pass_fail_ben(.,moderate_benign_percentage)))
+colnames(moderate_benign)[18] = 'pass_fail_moderate_benign'
+colnames(moderate_benign)[19] = 'control_variants_moderate_benign'
+colnames(moderate_benign)[20] = 'misclassified_variants_moderate_benign'
+
+#supporting benign
+
+supporting_benign = filter(clinvar23, clinvar23$REVEL > 0.183 & clinvar23$REVEL <= 0.290)
+supporting_benign = supporting_benign %>% group_by(Gene) %>% group_modify((~pass_fail_ben(.,supporting_benign_percentage)))
+colnames(supporting_benign)[18] = 'pass_fail_supporting_benign'
+colnames(supporting_benign)[19] = 'control_variants_supporting_benign'
+colnames(supporting_benign)[20] = 'misclassified_variants_supporting_benign'
+
+#create a new column that annotates whether each variant is in an interval that is concordant,discordant or indeterminate (insufficient evidence). This takes into account how many control variants are in each interval and whether that meets the required number of control variants needed for concordance or discordance. It is also takes into account the incorrect prediction percentage.
+
+strong_pathogenic$pr_variant_pass_strong_path = ifelse(strong_pathogenic$pass_fail_strong_pathogenic == 'Concordant' & strong_pathogenic$control_variants_strong_pathogenic >= strong_path_x_pass, 'Concordant', ifelse(strong_pathogenic$pass_fail_strong_pathogenic == 'Discordant' & strong_pathogenic$control_variants_strong_pathogenic >= strong_path_x_fail,'Discordant','Insufficient variants'))
+
+moderate_pathogenic$pr_variant_pass_moderate_path = ifelse(moderate_pathogenic$pass_fail_moderate_pathogenic == 'Concordant' & moderate_pathogenic$control_variants_moderate_pathogenic >= moderate_path_x_pass, 'Concordant', ifelse(moderate_pathogenic$pass_fail_moderate_pathogenic == 'Discordant' & moderate_pathogenic$control_variants_moderate_pathogenic >= moderate_path_x_fail,'Discordant','Insufficient variants'))
+
+supporting_pathogenic$pr_variant_pass_supporting_path = ifelse(supporting_pathogenic$pass_fail_supporting_pathogenic == 'Concordant' & supporting_pathogenic$control_variants_supporting_pathogenic >= supporting_path_x_pass, 'Concordant', ifelse(supporting_pathogenic$pass_fail_supporting_pathogenic == 'Discordant' & supporting_pathogenic$control_variants_supporting_pathogenic >= supporting_path_x_fail,'Discordant','Insufficient variants'))
+
+supporting_benign$pr_variant_pass_supporting_ben = ifelse(supporting_benign$pass_fail_supporting_benign == 'Concordant' & supporting_benign$control_variants_supporting_benign >= supporting_ben_x_pass, 'Concordant', ifelse(supporting_benign$pass_fail_supporting_benign == 'Discordant' & supporting_benign$control_variants_supporting_benign >= supporting_ben_x_fail,'Discordant','Insufficient variants'))
+
+moderate_benign$pr_variant_pass_moderate_ben = ifelse(moderate_benign$pass_fail_moderate_benign == 'Concordant' & moderate_benign$control_variants_moderate_benign >= moderate_ben_x_pass, 'Concordant', ifelse(moderate_benign$pass_fail_moderate_benign == 'Discordant' & moderate_benign$control_variants_moderate_benign >= moderate_ben_x_fail,'Discordant','Insufficient variants'))
+
+strong_benign$pr_variant_pass_strong_ben = 'Insufficient variants'
+
+very_strong_benign$pr_variant_pass_very_strong_ben = 'Insufficient variants'
+
+#create dataframes for each interval, keeping only unique genes
+
+strong_pathogenic_unique = strong_pathogenic %>% distinct(Gene, .keep_all = TRUE)
+moderate_pathogenic_unique = moderate_pathogenic %>% distinct(Gene, .keep_all = TRUE)
+supporting_pathogenic_unique = supporting_pathogenic %>% distinct(Gene, .keep_all = TRUE)
+
+very_strong_benign_unique = very_strong_benign %>% distinct(Gene, .keep_all = TRUE)
+strong_benign_unique = strong_benign %>% distinct(Gene, .keep_all = TRUE)
+moderate_benign_unique = moderate_benign %>% distinct(Gene, .keep_all = TRUE)
+supporting_benign_unique = supporting_benign %>% distinct(Gene, .keep_all = TRUE)
+
+#create a dataframe that has all the gene names/ gene ID's that can be used to merge the different evidence strength interval dataframes, without causing duplicates
+
+clinvar_wg_gene_id = data.frame(Gene = clinvar23_unique_Gene$Gene, GeneID = clinvar23_unique_Gene$GeneID, Chr = clinvar23_unique_Gene$Chr)
+
+#list of dataframes to merge 
+
+df_list = list(clinvar_wg_gene_id,strong_pathogenic_unique, moderate_pathogenic_unique, supporting_pathogenic_unique, very_strong_benign_unique, strong_benign_unique, moderate_benign_unique,supporting_benign_unique)
+
+#final dataframe to create for merge, merge by Gene, GeneID and Chromosome
+
+final_wg = df_list %>% purrr::reduce(full_join, by= c('Gene','GeneID','Chr'))
+
+#subset the final dataframe to select for columns needed in downstream analyses
+
+wg = subset(final_wg, select = c(Gene,Chr, GeneID,pass_fail_strong_pathogenic,pass_fail_moderate_pathogenic,pass_fail_supporting_pathogenic,pass_fail_very_strong_benign,pass_fail_strong_benign,pass_fail_supporting_benign,pass_fail_moderate_benign, control_variants_strong_pathogenic, control_variants_moderate_pathogenic, control_variants_supporting_pathogenic, control_variants_very_strong_benign, control_variants_strong_benign, control_variants_moderate_benign, control_variants_supporting_benign,misclassified_variants_strong_pathogenic, misclassified_variants_moderate_pathogenic, misclassified_variants_supporting_pathogenic, misclassified_variants_very_strong_benign, misclassified_variants_strong_benign, misclassified_variants_moderate_benign,misclassified_variants_supporting_benign,pr_variant_pass_strong_path,pr_variant_pass_moderate_path,pr_variant_pass_supporting_path,pr_variant_pass_strong_ben,pr_variant_pass_very_strong_ben,pr_variant_pass_moderate_ben, pr_variant_pass_supporting_ben))
+
+# calculate the total number of control variants across the gene in all bins
+wg = wg %>%  mutate (total_control_variants = rowSums(select(., control_variants_strong_pathogenic,control_variants_moderate_pathogenic, control_variants_supporting_pathogenic,control_variants_supporting_benign, control_variants_moderate_benign,control_variants_strong_benign,control_variants_very_strong_benign), na.rm = TRUE))
+
+#to make different plots, taking into account all concordance or discordance regardless of control variants 
+
+summary_1 = data.frame(table(wg$pass_fail_strong_pathogenic))
+summary_1$Condition = 'Strong Pathogenic'
+
+summary_2 = data.frame(table(wg$pass_fail_moderate_pathogenic))
+summary_2$Condition = 'Moderate Pathogenic'
+
+summary_3 = data.frame(table(wg$pass_fail_supporting_pathogenic))
+summary_3$Condition = 'Supporting Pathogenic'
+
+summary_4 = data.frame(table(wg$pass_fail_very_strong_benign))
+summary_4$Condition = 'Very Strong Benign'
+
+summary_5 = data.frame(table(wg$pass_fail_strong_benign))
+summary_5$Condition = 'Strong Benign'
+
+summary_6 = data.frame(table(wg$pass_fail_moderate_benign))
+summary_6$Condition = 'Moderate Benign'
+
+summary_7 = data.frame(table(wg$pass_fail_supporting_benign))
+summary_7$Condition = 'Supporting Benign'
+
+summary = (rbind(summary_1,summary_2,summary_3,summary_4,summary_5,summary_6,summary_7))
+
+print(sum(summary$Freq))
+
+#Make summary dataframes for plots and take into account intervals that have enough control variants to determine concordance or discordance
+
+strong_pathogenic_pr = filter(wg, wg$control_variants_strong_pathogenic >= strong_path_x_pass)
+strong_pathogenic_pr_pass = filter(wg, wg$control_variants_strong_pathogenic >= strong_path_x_pass & wg$pass_fail_strong_pathogenic == 'Concordant')
+strong_pathogenic_pr_fail = filter(wg, wg$control_variants_strong_pathogenic >= strong_path_x_fail & wg$pass_fail_strong_pathogenic == 'Discordant')
+summary_pr_1 = data.frame(c('Concordant','Discordant'),c(nrow(strong_pathogenic_pr_pass), nrow(strong_pathogenic_pr_fail)))
+summary_pr_1$Condition = 'Strong Pathogenic'
+colnames(summary_pr_1)[1] = 'Var1'
+colnames(summary_pr_1)[2] = 'Freq'
+
+moderate_pathogenic_pr = filter(wg, wg$control_variants_moderate_pathogenic >= moderate_path_x_pass)
+moderate_pathogenic_pr_pass = filter(wg, wg$control_variants_moderate_pathogenic >= moderate_path_x_pass & wg$pass_fail_moderate_pathogenic == 'Concordant')
+moderate_pathogenic_pr_fail = filter(wg, wg$control_variants_moderate_pathogenic >= moderate_path_x_fail & wg$pass_fail_moderate_pathogenic == 'Discordant')
+summary_pr_2 = data.frame(c('Concordant','Discordant'),c(nrow(moderate_pathogenic_pr_pass), nrow(moderate_pathogenic_pr_fail)))
+summary_pr_2$Condition = 'Moderate Pathogenic'
+colnames(summary_pr_2)[1] = 'Var1'
+colnames(summary_pr_2)[2] = 'Freq'
+
+supporting_pathogenic_pr = filter(wg, wg$control_variants_supporting_pathogenic >= supporting_path_x_pass)
+supporting_pathogenic_pr_pass = filter(wg, wg$control_variants_supporting_pathogenic >= supporting_path_x_pass & wg$pass_fail_supporting_pathogenic == 'Concordant')
+supporting_pathogenic_pr_fail = filter(wg, wg$control_variants_supporting_pathogenic >= supporting_path_x_fail & wg$pass_fail_supporting_pathogenic == 'Discordant')
+summary_pr_3 = data.frame(c('Concordant','Discordant'),c(nrow(supporting_pathogenic_pr_pass), nrow(supporting_pathogenic_pr_fail)))
+summary_pr_3$Condition = 'Supporting Pathogenic'
+colnames(summary_pr_3)[1] = 'Var1'
+colnames(summary_pr_3)[2] = 'Freq'
+
+moderate_benign_pr = filter(wg, wg$control_variants_moderate_benign >= moderate_ben_x_pass)
+moderate_benign_pr_pass = filter(wg, wg$control_variants_moderate_benign >= moderate_ben_x_pass & wg$pass_fail_moderate_benign == 'Concordant')
+moderate_benign_pr_fail = filter(wg, wg$control_variants_moderate_benign >= moderate_ben_x_fail & wg$pass_fail_moderate_benign == 'Discordant')
+summary_pr_6 = data.frame(c('Concordant','Discordant'),c(nrow(moderate_benign_pr_pass), nrow(moderate_benign_pr_fail)))
+summary_pr_6$Condition = 'Moderate Benign'
+colnames(summary_pr_6)[1] = 'Var1'
+colnames(summary_pr_6)[2] = 'Freq'
+
+supporting_benign_pr = filter(wg, wg$control_variants_supporting_benign >= supporting_ben_x_pass)
+supporting_benign_pr_pass = filter(wg, wg$control_variants_supporting_benign >= supporting_ben_x_pass & wg$pass_fail_supporting_benign == 'Concordant')
+supporting_benign_pr_fail = filter(wg, wg$control_variants_supporting_benign >= supporting_ben_x_fail & wg$pass_fail_supporting_benign == 'Discordant')
+summary_pr_7 = data.frame(c('Concordant','Discordant'),c(nrow(supporting_benign_pr_pass), nrow(supporting_benign_pr_fail)))
+summary_pr_7$Condition = 'Supporting Benign'
+colnames(summary_pr_7)[1] = 'Var1'
+colnames(summary_pr_7)[2] = 'Freq'
+
+
+#how many genes are there in the clinvar23 dataset
+total_genes = length(unique(clinvar23$GeneID))
+
+print(total_genes)
+
+#rbind the summary datasets together for one big summary dataframe used for the plots
+summary_pr = (rbind(summary_pr_2,summary_pr_1,summary_pr_3,summary_pr_6,summary_pr_7))
+
+#add a new row for variants that are in intdeterminate intervals
+new_row = data.frame(Freq = c(sum(summary_1$Freq)- sum(summary_pr_1$Freq), sum(summary_2$Freq)- sum(summary_pr_2$Freq), sum(summary_3$Freq)-sum(summary_pr_3$Freq),sum(summary_6$Freq)- sum(summary_pr_6$Freq),sum(summary_7$Freq)- sum(summary_pr_7$Freq), sum(summary_4$Freq),sum(summary_5$Freq)), Condition = c('Strong Pathogenic','Moderate Pathogenic', 'Supporting Pathogenic','Moderate Benign','Supporting Benign','Very Strong Benign','Strong Benign'), Var1 = c('Insufficient variants','Insufficient variants','Insufficient variants','Insufficient variants','Insufficient variants','Insufficient variants','Insufficient variants'))
+
+#add a new row for variants that are in intervals with no data (no variants)
+new_row_2 = data.frame(Freq = c(total_genes- sum(summary_1$Freq), total_genes- sum(summary_2$Freq), total_genes-sum(summary_3$Freq),total_genes-sum(summary_6$Freq),total_genes- sum(summary_7$Freq), total_genes - sum(summary_4$Freq) , total_genes - sum(summary_5$Freq)), Condition = c('Strong Pathogenic','Moderate Pathogenic', 'Supporting Pathogenic','Moderate Benign','Supporting Benign','Very Strong Benign','Strong Benign'), Var1 = c('No variants','No variants','No variants','No variants','No variants','No variants','No variants'))
+
+#rbind the two new rows to the summary dataframe
+summary_pr = rbind(summary_pr, new_row, new_row_2)
+
+#factor the condition for the summary data according to how you want the conditions displayed on the plots
+summary_pr$Condition = factor(summary_pr$Condition, levels = c('Very Strong Benign','Strong Benign','Moderate Benign','Supporting Benign','Supporting Pathogenic','Moderate Pathogenic','Strong Pathogenic'))
+
+#create a new dataframe for use later for the VUS donut plots
+wg_variant_donut = rbind(strong_pathogenic, moderate_pathogenic, supporting_pathogenic, moderate_benign, supporting_benign, very_strong_benign,strong_benign)
+
+#plots
+
+library(ggpattern)
+
+#stacked barplot Figure 2 panel A
+plot_1 = ggplot(summary_pr, aes(fill = Var1, x = Condition, y = Freq), pattern = Var1) + geom_bar_pattern(aes(fill = Var1, pattern = Var1),stat = 'identity',position = position_stack(),
+                   pattern_fill = c('No Data' ="black"),
+                   pattern_angle = 45,
+                   pattern_density = 0.05,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6) + theme_classic(base_size = 14) + theme(plot.title = element_text (size = 12,hjust = 0.5),axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))+ geom_label_repel(mapping = aes(fill = Var1, label = Freq), direction = 'y',color = 'white',position = position_stack(reverse = FALSE, vjust = 0.5),size = 4, fontface = "bold", show.legend = FALSE,min.segment.length = unit(6, 'lines'), force = 0.0025, force_pull = 0, box.padding = 0.5, point.size = NA) + guides(fill=guide_legend(title="Legend"))+ scale_fill_manual(name = 'Legend',values = c('Concordant' = '#AEAE00', 'Discordant' = '#E8A11C','Insufficient variants' = '#695B73', 'No variants' = '#695B73')) + scale_pattern_manual(name = 'Legend', values = c('No variants' = 'stripe', 'Concordant' = 'none', 'Discordant' = 'none', 'Insufficient variants' = 'none')) + labs(x = NULL, y = 'Number of Genes', title = str_wrap('REVEL stacked barplot : concordance, discordance, or insufficient variants by evidence strength intervals, disease relevant genes')) 
+
+plot_1
+
+
+
+
+#load acmg genes names into a list
+
+ACMG_genes = c('ACTA2',
+'ACTC1',
+'ACVRL1',
+'APC',
+'APOB',
+'ATP7B',
+'BAG3',
+'BMPR1A',
+'BRCA1',
+'BRCA2',
+'BTD',
+'CACNA1S',
+'CASQ2',
+'COL3A1',
+'DES',
+'DSG2',
+'DSC2',
+'DSP',
+'ENG',
+'FBN1',
+'FLNC',
+'GAA',
+'GLA',
+'HFE',
+'HNF1A',
+'KCNH2',
+'KCNQ1',
+'LDLR',
+'LMNA',
+'MAX',
+'MEN1',
+'MLH1',
+'MSH2',
+'MSH6',
+'MUTYH',
+'MYBPC3',
+'MYH11',
+'MYH7',
+'MYL2',
+'MYL3',
+'NF2',
+'OTC',
+'PALB2',
+'PCSK9',
+'PKP2',
+'PMS2',
+'PRKAG2',
+'PTEN',
+'RB1',
+'RBM20',
+'RET',
+'RPE65',
+'RYR1',
+'RYR2',
+'SCN5A',
+'SDHAF2',
+'SDHB',
+'SDHC',
+'SDHD',
+'SMAD3',
+'SMAD4',
+'STK11',
+'TGFBR1',
+'TGFBR2',
+'TMEM127',
+'TMEM43',
+'TNNC1',
+'TNNI3',
+'TNNT2',
+'TP53',
+'TPM1',
+'TRDN',
+'TSC1',
+'TSC2',
+'TTN',
+'TTR',
+'VHL',
+'WT1')
+
+
+#filter the whole genome dataframe on only acmg genes
+
+wg_acmg_x = wg %>%
+  filter(map_lgl(Gene, ~ any(ACMG_genes %in% .x)))
+
+#count which genes intervals are in concordant, discordant or insufficient variants intervals for ACMG genes
+wg_acmg_pr = data.frame(Var1 = c('Concordant','Discordant','Insufficient variants','No variants','Concordant','Discordant','Insufficient variants','No variants','Concordant','Discordant','Insufficient variants','No variants','Concordant','Discordant','Insufficient variants','No variants','Concordant','Discordant','Insufficient variants','No variants','Concordant','Discordant','Insufficient variants','No variants','Concordant','Discordant','Insufficient variants','No variants'), Freq = c(nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_strong_path == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_strong_path == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_strong_path == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_strong_path) == TRUE)),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_moderate_path == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_moderate_path == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_moderate_path == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_moderate_path) == TRUE)),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_supporting_path == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_supporting_path == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_supporting_path == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_supporting_path) == TRUE)),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_very_strong_ben == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_very_strong_ben == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_very_strong_ben == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_very_strong_ben) == TRUE)),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_strong_ben == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_strong_ben == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_strong_ben == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_strong_ben) == TRUE)),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_moderate_ben == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_moderate_ben == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_moderate_ben == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_moderate_ben) == TRUE)),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_supporting_ben == 'Concordant')), nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_supporting_ben == 'Discordant')),nrow(filter(wg_acmg_x,wg_acmg_x$pr_variant_pass_supporting_ben == 'Insufficient variants')),nrow(filter(wg_acmg_x,is.na(wg_acmg_x$pr_variant_pass_supporting_ben) == TRUE))), Condition = c('Strong Pathogenic', 'Strong Pathogenic', 'Strong Pathogenic','Strong Pathogenic', 'Moderate Pathogenic','Moderate Pathogenic','Moderate Pathogenic','Moderate Pathogenic','Supporting Pathogenic','Supporting Pathogenic','Supporting Pathogenic','Supporting Pathogenic','Very Strong Benign','Very Strong Benign','Very Strong Benign','Very Strong Benign','Strong Benign','Strong Benign','Strong Benign','Strong Benign','Moderate Benign','Moderate Benign','Moderate Benign','Moderate Benign','Supporting Benign','Supporting Benign','Supporting Benign','Supporting Benign'))
+
+#Condition acmg stacked barplot 
+wg_acmg_pr$Condition = factor(wg_acmg_pr$Condition, levels = c('Very Strong Benign','Strong Benign','Moderate Benign','Supporting Benign','Supporting Pathogenic','Moderate Pathogenic','Strong Pathogenic'))
+
+
+#acmg stacked barplot, Figure 2 panel C
+plot_2 = ggplot(wg_acmg_pr, aes(fill = Var1, x = Condition, y = Freq), pattern = Var1) + geom_bar_pattern(aes(fill = Var1, pattern = Var1),stat = 'identity',position = position_stack(),
+                   pattern_fill = c('No variants' ="black"),
+                   pattern_angle = 45,
+                   pattern_density = 0.05,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6) + theme_classic(base_size = 14) + theme(plot.title = element_text (size = 10,hjust = 0.5),axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))+ geom_label_repel(mapping = aes(fill = Var1, label = Freq), direction = 'y',color = 'white',position = position_stack(reverse = FALSE, vjust = 0.5),size = 4, fontface = "bold", show.legend = FALSE,min.segment.length = unit(6, 'lines'), force = 0.0025, force_pull = 0, box.padding = 0.5, point.size = NA) + guides(fill=guide_legend(title="Legend"))+ scale_fill_manual(name = 'Legend',values = c('Concordant' = '#AEAE00', 'Discordant' = '#E8A11C','Insufficient variants' = '#695B73', 'No variants' = '#695B73')) + scale_pattern_manual(name = 'Legend', values = c('No variants' = 'stripe', 'Concordant' = 'none', 'Discordant' = 'none', 'Insufficient variants' = 'none')) + labs(x = NULL, y = 'Number of Genes', title = str_wrap('REVEL stacked barplot ACMG Genes: concordance, discordance, or insufficient variants by evidence strength intervals, disease relevant genes')) 
+
+plot_2
+
+#function to count the number of variants in each evidence strength interval
+
+interval_num_variants = function(df) {
+  df$str_path_VUS_num = nrow(filter(df, df$REVEL >= 0.932))
+  df$mod_path_VUS_num = nrow(filter(df, df$REVEL < 0.932 & df$REVEL >= 0.773))
+  df$supp_path_VUS_num = nrow(filter(df, df$REVEL < 0.773 & df$REVEL >= 0.644))
+  df$supp_ben_VUS_num = nrow(filter(df, df$REVEL > 0.183 & df$REVEL <= 0.290))
+  df$mod_ben_VUS_num = nrow(filter(df, df$REVEL > 0.016 & df$REVEL <= 0.183))
+  df$str_ben_VUS_num = nrow(filter(df, df$REVEL > 0.003 & df$REVEL <= 0.016))
+  df$vstr_ben_VUS_num = nrow(filter(df, df$REVEL <= 0.003))
+  return(df)                              
+}
+
+#count the number of VUS in each interval for each gene
+wg_VUS = VUS %>% group_by(Gene) %>% group_modify(~interval_num_variants(.))
+
+#keep distinct genes
+wg_VUS = wg_VUS %>% distinct(Gene, .keep_all = TRUE)
+
+#merge wg and wg_VUS dataframes on gene to get the count of VUS in each interval
+VUS_merge = merge(wg,wg_VUS, by = 'Gene', all.x = TRUE, all.y = FALSE)
+
+#subset the merged dataframe
+VUS_merge_x = subset(VUS_merge, select = c(Chr.x, Start, End, Ref, Alt, REVEL, BayesDel_noAF_score, genome_AF, exome_AF, Otherinfo11, Stars, GeneID.x,Significance, clnvc, Variant_type, Gene,pr_variant_pass_strong_path,pr_variant_pass_moderate_path,pr_variant_pass_supporting_path,pr_variant_pass_moderate_ben,pr_variant_pass_supporting_ben,pr_variant_pass_strong_ben,pr_variant_pass_very_strong_ben,str_path_VUS_num,mod_path_VUS_num,supp_path_VUS_num,supp_ben_VUS_num,mod_ben_VUS_num,str_ben_VUS_num,vstr_ben_VUS_num))
+
+#function to count the number of variants in Concordant, discordant or insufficient variants intervals
+
+calc <- function(df) {
+  df <- df %>%
+    mutate(
+      concordant_1 = if_else(pr_variant_pass_strong_path == 'Concordant', str_path_VUS_num, 0),
+      concordant_2 = if_else(pr_variant_pass_moderate_path == 'Concordant', mod_path_VUS_num, 0),
+      concordant_3 = if_else(pr_variant_pass_supporting_path == 'Concordant', supp_path_VUS_num, 0),
+      concordant_4 = if_else(pr_variant_pass_supporting_ben == 'Concordant', supp_ben_VUS_num, 0),
+      concordant_5 = if_else(pr_variant_pass_moderate_ben == 'Concordant', mod_ben_VUS_num, 0),
+      concordant_6 = if_else(pr_variant_pass_strong_ben == 'Concordant', str_ben_VUS_num, 0),
+      concordant_7 = if_else(pr_variant_pass_very_strong_ben == 'Concordant', vstr_ben_VUS_num, 0),
+      
+      Discordant_1 = if_else(df$pr_variant_pass_strong_path == 'Discordant', df$str_path_VUS_num, 0),
+      Discordant_2 = if_else(df$pr_variant_pass_moderate_path == 'Discordant', df$mod_path_VUS_num, 0),
+      Discordant_3 = if_else(df$pr_variant_pass_supporting_path == 'Discordant', df$supp_path_VUS_num,0),
+      Discordant_4 = if_else(df$pr_variant_pass_supporting_ben == 'Discordant', df$supp_ben_VUS_num, 0),
+      Discordant_5 = if_else(df$pr_variant_pass_moderate_ben == 'Discordant', df$mod_ben_VUS_num, 0),
+      Discordant_6 = if_else(df$pr_variant_pass_strong_ben == 'Discordant', df$str_ben_VUS_num, 0),
+      Discordant_7 = if_else(df$pr_variant_pass_very_strong_ben == 'Discordant', df$vstr_ben_VUS_num, 0),
+      Insufficient_variants_1 = if_else(df$pr_variant_pass_strong_path == 'Insufficient variants', df$str_path_VUS_num, 0),
+    Insufficient_variants_2 = if_else(df$pr_variant_pass_moderate_path == 'Insufficient variants', df$mod_path_VUS_num, 0),
+    Insufficient_variants_3 = if_else(df$pr_variant_pass_supporting_path == 'Insufficient variants', df$supp_path_VUS_num,0),
+    Insufficient_variants_4 = if_else(df$pr_variant_pass_supporting_ben == 'Insufficient variants', df$supp_ben_VUS_num, 0),
+    Insufficient_variants_5 = if_else(df$pr_variant_pass_moderate_ben == 'Insufficient variants', df$mod_ben_VUS_num, 0),
+    Insufficient_variants_6 = if_else(df$pr_variant_pass_strong_ben == 'Insufficient variants', df$str_ben_VUS_num, 0),
+    Insufficient_variants_7 = if_else(df$pr_variant_pass_very_strong_ben == 'Insufficient variants', df$vstr_ben_VUS_num, 0),
+    )
+  
+  return(df)
+}
+
+cc = VUS_merge_x %>% mutate(calc(.))
+
+cc$Concordant <- rowSums(cc[, c("concordant_1", "concordant_2", "concordant_3", "concordant_4", "concordant_5", "concordant_6", "concordant_7")], na.rm = TRUE)
+
+cc$Discordant <- rowSums(cc[, c("Discordant_1", "Discordant_2", "Discordant_3", "Discordant_4", "Discordant_5", "Discordant_6", "Discordant_7")], na.rm = TRUE)
+
+cc$Insufficient_variants <- rowSums(cc[, c("Insufficient_variants_1", "Insufficient_variants_2", "Insufficient_variants_3", "Insufficient_variants_4", "Insufficient_variants_5", "Insufficient_variants_6", "Insufficient_variants_7")], na.rm = TRUE)
+
+#donut plot variant priors
+
+data = data.frame(
+  Significance = c('Concordant','Discordant','Insufficient variants'),
+  count = c(sum(cc$Concordant),sum(cc$Discordant),sum(cc$Insufficient_variants)))
+
+data$Significance = factor(data$Significance, levels = c('Concordant','Discordant','Insufficient variants'))
+
+print(sum(data$count))
+
+# Compute percentages
+data$fraction = data$count / sum(data$count)
+
+data$ymax = cumsum(data$fraction)
+
+# Compute the bottom of each rectangle
+data$ymin = c(0, head(data$ymax, n=-1))
+
+# Compute label position
+data$labelPosition <- (data$ymax + data$ymin) / 2
+
+# Compute a good label
+data$label <- paste0(data$Significance, "\n value: ", data$count)
+
+# Make the plot
+plot_3 = ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=7, xmin=6, fill=Significance)) +
+  geom_rect() +
+  geom_label( x= 6, aes(y=labelPosition, label=label), size=4.5) + scale_fill_manual(values = c('Discordant' = '#E8A11C','Concordant' = '#AEAE00','Insufficient variants' = '#695B73')) +
+  coord_polar(theta="y") +
+  xlim(c(3, 7)) +
+  theme_void() +
+  theme(legend.position = "none", plot.title = element_text (size = 12,hjust = 0.5)) + ggtitle('VUS that fall into concordant, discordant, or insufficient variants intervals, disease relevant genes')
+
+plot_3
+
+
+pdf(file = 'file name here', width = 8, height = 8)
+
+plot_1
+
+plot_2
+
+plot_3
+
+dev.off()
+
+```
