@@ -1,0 +1,128 @@
+---
+title: "Untitled"
+author: "Malvika Tejura"
+date: "2024-03-18"
+output: html_document
+---
+
+```{r}
+
+##this script creates the whole genome plots in Figure 1 for REVEL and BayesDel. REVEL and BayesDel all snv files are big and it's not recommended to run this script locally
+
+##read in all snv revel file, all snv bayesdel file and supplementary table 1 (ClinGen SVI calibration dataset)
+
+##this script outputs a pdf, please change the file name and directory at the end of the script
+
+
+library('dplyr')
+library('readxl')
+library('ggplot2')
+library('tidyverse')
+library('cowplot')
+library('ggpubr')
+
+#read in ClinGen SVI calibration dataset 
+
+clinvar_wg = read.csv('ClinGen SVI Calibration Dataset Supplementary Table 1')
+
+#change datatype of BayesDel scores to numeric from clinvar_wg dataframe
+
+clinvar_wg$BayesDel_nsfp33a_noAF = as.numeric(as.character(clinvar_wg$BayesDel_nsfp33a_noAF))
+
+#change datatype of REVEL scores to numeric from clinvar_wg dataframe
+
+clinvar_wg$REVEL_score = as.numeric(as.character(clinvar_wg$REVEL_score))
+
+#read all chromosome files from BayesDel, Supplementary Table 6
+
+chr1 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr1')
+chr2 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr2')
+chr3 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr3')
+chr4 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr4')
+chr5 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr5')
+chr6 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr6')
+chr7 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr7')
+chr8 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr8')
+chr9 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr9')
+chr10 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr10')
+chr11 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr11')
+chr12 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr12')
+chr13 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr13')
+chr14 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr14')
+chr15 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr15')
+chr16 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr16')
+chr17 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr17')
+chr18 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr18')
+chr19 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr19')
+chr20 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr20')
+chr21 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr21')
+chr22 = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chr22')
+chrM = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chrM')
+chrX = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chrX')
+chrY = read_table('~/BayesDel_170824_noAF/BayesDel_170824_noAF_chrY')
+
+#create one single BayesDel all snv file 
+
+all_snv_bd = rbind(chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22,chrM,chrX,chrY)
+
+#read all snv REVEL file 
+
+all_snv_revel = read_csv('Supplementary Table 5')
+
+#REVEL 
+
+REVEL_hist = function(clinvar_df, all_snv_df, height, gene) {
+  
+  phist = gghistogram(clinvar_df, x = 'REVEL_score', fill = 'Significance', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text=element_text(size=16), axis.title.x =element_blank())+ geom_vline(xintercept = 0.932, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.773, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.644, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = 0.290, linetype = 'dashed', color = '#0033CC',size = 1)+ geom_vline(xintercept = 0.183, linetype = 'longdash',color = '#0033CC',size = 1) + geom_vline(xintercept = 0.016, linetype = 'twodash',color = '#0033CC',size = 1) +rremove("x.axis") + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(0,1)) + ggtitle('REVEL histogram',gene) + ylab('Variant count')
+  phist
+  
+  #add all snv dataframe here
+  
+  pdensity = ggdensity(all_snv_df, x = 'REVEL', fill = '#999999', color = NA) + theme(legend.position = "none", axis.text=element_text(size=16))+
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), position = "right") +scale_x_continuous(expand = c(0,0), limits = c(0,1), breaks = c(0.25,0.5,0.75,1), labels = c('0.25','0.5','0.75','1')) + labs(x = 'REVEL score', y = 'All SNV density')
+  pdensity 
+  
+  aligned_plots <- suppressWarnings(align_plots(phist,pdensity, align="hv", axis="tblr")) 
+  aligned_plots
+  cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
+  cx = cx
+    
+  return(cx)
+}
+
+REVEL_clinvar = REVEL_hist(clinvar_wg, all_snv_revel, 2500, 'REVEL genome-wide')
+
+
+#BayesDel
+
+BayesDel_hist = function(clinvar_df, all_snv_df, height, gene) {
+    phist = gghistogram(clinvar_df, x = 'BayesDel_nsfp33a_noAF', fill = 'Significance', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA, bins = 30) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text =element_text(size=16), axis.title.x=element_blank())+ geom_vline(xintercept = 0.5, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.27, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.13, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = -0.36, linetype = 'longdash', color = '#0033CC',size = 1)+ geom_vline(xintercept = -0.18, linetype = 'dashed',color = '#0033CC',size = 1) + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + ggtitle('BayesDel histogram',gene) + ylab('Variant count')
+  phist 
+  
+  pdensity = ggdensity(all_snv_df, x = 'BayesDel_nsfp33a_noAF', fill = '#999999', color = NA) + theme(legend.position = "none", axis.text=element_text(size=16))+
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), position = "right")+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + labs(x = 'BayesDel score', y = 'All SNV density')
+  pdensity
+
+aligned_plots <- suppressWarnings(align_plots(phist,pdensity, align="hv", axis="tblr"))  
+aligned_plots
+cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
+cx
+
+return(cx)
+
+}
+
+BayesDel_clinvar = BayesDel_hist(clinvar_wg, all_snv_bd, 2500, 'BayesDel genome-wide')
+
+#pdf file, change file name and directory
+
+pdf(file = 'file name here', width = 8, height = 8)
+
+REVEL_clinvar
+
+BayesDel_clinvar
+
+dev.off()
+
+
+```
