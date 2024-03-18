@@ -1,0 +1,127 @@
+---
+title: "final_plots_fixed_gene_annotation"
+author: "Malvika Tejura"
+date: "2024-02-22"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(cowplot)
+library(tidyverse)
+library(dplyr)
+library(ggpubr)
+
+##read in relevant files for gene specifc dataframes with the correct directories, files should be in 'Fig4_S2_plots', total of 7 files to read in 
+
+## enter pdf file name of your choice at the very end, running the script should produce a pdffile with the figures from Figure 4 and/or Figure S2
+
+#clinvar23
+
+clinvar23 = read.csv('Clinvar 2023 Dataset Supplementary Table 2 or Clinvar 2023 Dataset without training variants Supplementary Table 3')
+
+clinvar23$REVEL = as.numeric(as.character(clinvar23$REVEL))
+
+clinvar23$BayesDel_noAF_score = as.numeric(as.character(clinvar23$BayesDel_noAF_score))
+
+#MSH2
+
+msh2_revel = read_csv("~/Downloads/msh2_all_snv_revel.csv")
+
+msh2_bayes = read_csv("~/Downloads/msh2_all_snv_bayes.csv")
+
+msh2_clinvar = filter(clinvar23, clinvar23$Gene == 'MSH2')
+
+
+#CSF1R
+
+csf1r_revel = read_csv("~/Downloads/csf1r_all_snv_revel.csv")
+
+csf1r_clinvar = filter(clinvar23, clinvar23$Gene == 'CSF1R')
+
+#ENG
+
+eng_revel = read_csv("~/Downloads/eng_all_snv_revel.csv")
+
+eng_bayes = read_csv("~/Downloads/eng_all_snv_bayes.csv")
+
+eng_clinvar = filter(clinvar23, clinvar23$Gene == 'ENG')
+
+
+#col7a1
+
+col7a1_clinvar = filter(clinvar23, clinvar23$Gene == 'COL7A1')
+
+col7a1_bayes = read_csv("~/Downloads/col7a1_all_snv_bayes.csv")
+
+
+#REVEL 
+
+REVEL_hist = function(clinvar_df, all_snv_df, height, gene) {
+  
+  phist = gghistogram(clinvar_df, x = 'REVEL', fill = 'Significance', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text=element_text(size=16), axis.title.x =element_blank())+ geom_vline(xintercept = 0.932, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.773, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.644, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = 0.290, linetype = 'dashed', color = '#0033CC',size = 1)+ geom_vline(xintercept = 0.183, linetype = 'longdash',color = '#0033CC',size = 1) + geom_vline(xintercept = 0.016, linetype = 'twodash',color = '#0033CC',size = 1) +rremove("x.axis") + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(0,1)) + ggtitle('REVEL histogram',gene) + ylab('Variant count')
+  phist
+  
+  #add all snv dataframe here
+  
+  pdensity = ggdensity(all_snv_df, x = 'REVEL', fill = '#999999', color = NA) + theme(legend.position = "none", axis.text=element_text(size=16))+
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), position = "right") +scale_x_continuous(expand = c(0,0), limits = c(0,1), breaks = c(0.25,0.5,0.75,1), labels = c('0.25','0.5','0.75','1')) + labs(x = 'REVEL score', y = 'All SNV density')
+  pdensity 
+  
+  aligned_plots <- suppressWarnings(align_plots(phist,pdensity, align="hv", axis="tblr")) 
+  aligned_plots
+  cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
+  cx = cx
+    
+  return(cx)
+}
+
+csf1r_fig = REVEL_hist(csf1r_clinvar, csf1r_revel, 12, 'CSF1R')
+
+msh2_revel_fig = REVEL_hist(msh2_clinvar, msh2_revel, 50, 'MSH2')
+
+eng_revel_fig = REVEL_hist(eng_clinvar, eng_revel, 12, 'ENG')
+
+
+#BayesDel
+
+BayesDel_hist = function(clinvar_df, all_snv_df, height, gene) {
+    phist = gghistogram(clinvar_df, x = 'BayesDel_noAF_score', fill = 'Significance', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA, bins = 30) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text =element_text(size=16), axis.title.x=element_blank())+ geom_vline(xintercept = 0.5, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.27, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.13, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = -0.36, linetype = 'longdash', color = '#0033CC',size = 1)+ geom_vline(xintercept = -0.18, linetype = 'dashed',color = '#0033CC',size = 1) + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + ggtitle('BayesDel histogram',gene) + ylab('Variant count')
+  phist 
+  
+  pdensity = ggdensity(all_snv_df, x = 'BayesDel_nsfp33a_noAF', fill = '#999999', color = NA) + theme(legend.position = "none", axis.text=element_text(size=16))+
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), position = "right")+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + labs(x = 'BayesDel score', y = 'All SNV density')
+  pdensity
+
+aligned_plots <- suppressWarnings(align_plots(phist,pdensity, align="hv", axis="tblr"))  
+aligned_plots
+cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
+cx
+
+return(cx)
+
+}
+
+col7a1_fig = BayesDel_hist(col7a1_clinvar,col7a1_bayes,40,'COL7A1')
+
+msh2_bayes_fig = BayesDel_hist(msh2_clinvar,msh2_bayes,50,'MSH2')
+
+eng_bayes_fig = BayesDel_hist(eng_clinvar,eng_bayes,16,'ENG')
+
+#save plots to a pdf, insert file name you want 
+
+pdf(file = 'file name here', width = 8, height = 8)
+
+csf1r_fig
+msh2_revel_fig
+eng_revel_fig
+
+col7a1_fig
+msh2_bayes_fig
+eng_bayes_fig
+
+dev.off()
+
+
+```
+
