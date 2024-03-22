@@ -1,0 +1,179 @@
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(ggpubr)
+```
+
+
+```{r}
+#x_intercepts:
+min_BVS = 0
+min_BS = 0
+min_BM = 44
+min_BP = 13
+min_PS = 83
+min_PM = 15
+min_PP = 6
+#y_intercepts (mct=misclassification tolerance):
+BVS_mct = 0
+BS_mct = 0
+BM_mct = 3.6
+BP_mct = 11.76
+PS_mct = 1.93
+PM_mct = 10.75
+PP_mct = 25.88
+```
+
+Add the concordance class for REVEL (setting indeterminate to NA for plotting)
+```{r}
+REVEL_gene_specific_incorrect_prediction_supp9 <- REVEL_gene_specific_incorrect_prediction_supp9 %>% mutate(BP_class = case_when(
+  percent_incorrectly_predicted_supporting_ben >= BP_mct ~ "BP_trending_discordant", 
+  percent_incorrectly_predicted_supporting_ben < BP_mct & control_variants_supporting_benign < min_BP ~ NA,
+  percent_incorrectly_predicted_supporting_ben < BP_mct & control_variants_supporting_benign >= min_BP ~ "BP_trending_concordant"))
+
+REVEL_gene_specific_incorrect_prediction_supp9 <- REVEL_gene_specific_incorrect_prediction_supp9 %>% mutate(BM_class = case_when(percent_incorrectly_predicted_moderate_ben >= BM_mct ~ "BM_trending_discordant", 
+  percent_incorrectly_predicted_moderate_ben < BM_mct & control_variants_moderate_benign < min_BM ~ NA,
+  percent_incorrectly_predicted_moderate_ben < BM_mct & control_variants_moderate_benign >= min_BM ~ "BM_trending_concordant"))
+
+REVEL_gene_specific_incorrect_prediction_supp9 <- REVEL_gene_specific_incorrect_prediction_supp9 %>% mutate(PP_class = case_when(percent_incorrectly_predicted_supporting_path >= PP_mct ~ "PP_trending_discordant", 
+  percent_incorrectly_predicted_supporting_path < PP_mct & control_variants_supporting_pathogenic < min_PP ~ NA,
+  percent_incorrectly_predicted_supporting_path < PP_mct & control_variants_supporting_pathogenic >= min_PP ~ "PP_trending_concordant"))
+
+REVEL_gene_specific_incorrect_prediction_supp9 <- REVEL_gene_specific_incorrect_prediction_supp9 %>% mutate(PM_class = case_when(percent_incorrectly_predicted_moderate_path >= PM_mct ~ "PM_trending_discordant", 
+  percent_incorrectly_predicted_moderate_path < PM_mct & control_variants_moderate_pathogenic < min_PM ~ NA,
+  percent_incorrectly_predicted_moderate_path < PM_mct & control_variants_moderate_pathogenic >= min_PM ~ "PM_trending_concordant"))
+
+REVEL_gene_specific_incorrect_prediction_supp9 <- REVEL_gene_specific_incorrect_prediction_supp9 %>% mutate(PS_class = case_when(percent_incorrectly_predicted_strong_path >= PS_mct ~ "PS_trending_discordant", 
+  percent_incorrectly_predicted_strong_path < PS_mct & control_variants_strong_pathogenic < min_PS ~ NA,
+  percent_incorrectly_predicted_strong_path < PS_mct & control_variants_strong_pathogenic >= min_PS ~ "PS_trending_concordant"))
+
+```
+
+```{r}
+write.csv(REVEL_gene_specific_incorrect_prediction_supp9, "REVEL_check.csv")
+```
+
+
+BayesDel intercepts
+```{r}
+#x_intercepts:
+BD_min_BM = 50
+BD_min_BP = 14
+BD_min_PS = 79
+BD_min_PM = 12
+BD_min_PP = 5
+#y_intercepts (mct=misclassification tolerance):
+BD_BM_mct = 3.17
+BD_BP_mct = 11.63
+BD_PS_mct = 2.02
+BD_PM_mct = 12.86
+BD_PP_mct = 28.52
+```
+
+
+Add the concordance class for BayesDel
+```{r}
+BayesDel_gene_specific_incorrect_prediction_supp10 <- BayesDel_gene_specific_incorrect_prediction_supp10 %>% mutate(BP_class = case_when(
+  percent_incorrectly_predicted_supporting_ben >= BD_BP_mct ~ "BP_trending_discordant", 
+  percent_incorrectly_predicted_supporting_ben < BD_BP_mct & control_variants_supporting_benign < BD_min_BP ~ NA,
+  percent_incorrectly_predicted_supporting_ben < BD_BP_mct & control_variants_supporting_benign >= BD_min_BP ~ "BP_trending_concordant"))
+
+BayesDel_gene_specific_incorrect_prediction_supp10 <- BayesDel_gene_specific_incorrect_prediction_supp10 %>% mutate(BM_class = case_when(percent_incorrectly_predicted_moderate_ben >= BD_BM_mct ~ "BM_trending_discordant", 
+  percent_incorrectly_predicted_moderate_ben < BD_BM_mct & control_variants_moderate_benign < BD_min_BM ~ NA,
+  percent_incorrectly_predicted_moderate_ben < BD_BM_mct & control_variants_moderate_benign >= BD_min_BM ~ "BM_trending_concordant"))
+
+BayesDel_gene_specific_incorrect_prediction_supp10 <- BayesDel_gene_specific_incorrect_prediction_supp10 %>% mutate(PP_class = case_when(percent_incorrectly_predicted_supporting_path >= BD_PP_mct ~ "PP_trending_discordant", 
+  percent_incorrectly_predicted_supporting_path < BD_PP_mct & control_variants_supporting_pathogenic < BD_min_PP ~ NA,
+  percent_incorrectly_predicted_supporting_path < BD_PP_mct & control_variants_supporting_pathogenic >= BD_min_PP ~ "PP_trending_concordant"))
+
+BayesDel_gene_specific_incorrect_prediction_supp10 <- BayesDel_gene_specific_incorrect_prediction_supp10 %>% mutate(PM_class = case_when(percent_incorrectly_predicted_moderate_path >= BD_PM_mct ~ "PM_trending_discordant", 
+  percent_incorrectly_predicted_moderate_path < BD_PM_mct & control_variants_moderate_pathogenic < BD_min_PM ~ NA,
+  percent_incorrectly_predicted_moderate_path < BD_PM_mct & control_variants_moderate_pathogenic >= BD_min_PM ~ "PM_trending_concordant"))
+
+BayesDel_gene_specific_incorrect_prediction_supp10 <- BayesDel_gene_specific_incorrect_prediction_supp10 %>% mutate(PS_class = case_when(percent_incorrectly_predicted_strong_path >= BD_PS_mct ~ "PS_trending_discordant", 
+  percent_incorrectly_predicted_strong_path < BD_PS_mct & control_variants_strong_pathogenic < BD_min_PS ~ NA,
+  percent_incorrectly_predicted_strong_path < BD_PS_mct & control_variants_strong_pathogenic >= BD_min_PS ~ "PS_trending_concordant"))
+```
+
+
+REVEL pathogenic intervals:
+```{r}
+REVEL_path_dots = ggplot(REVEL_gene_specific_incorrect_prediction_supp9) + theme_classic() +scale_y_continuous(limits = c(0, 101)) + scale_x_continuous(limits = c(0, 140)) + 
+  
+  geom_point(data = REVEL_gene_specific_incorrect_prediction_supp9[!is.na(REVEL_gene_specific_incorrect_prediction_supp9$PP_class),],aes(x=control_variants_supporting_pathogenic, y=percent_incorrectly_predicted_supporting_path, color = PP_class), size = 0.8, position=position_jitter(h=0.8,w=0.29))+ 
+ 
+  geom_point(data = REVEL_gene_specific_incorrect_prediction_supp9[!is.na(REVEL_gene_specific_incorrect_prediction_supp9$PM_class),],aes(x=control_variants_moderate_pathogenic, y=percent_incorrectly_predicted_moderate_path, color = PM_class), size = 0.8, position=position_jitter(h=0.4,w=0.33))+  
+  
+  geom_point(data = REVEL_gene_specific_incorrect_prediction_supp9[!is.na(REVEL_gene_specific_incorrect_prediction_supp9$PS_class),],aes(x=control_variants_strong_pathogenic, y=percent_incorrectly_predicted_strong_path, color = PS_class), size = 0.8, position=position_jitter(h=0.21,w=0.031))+ 
+  
+  scale_color_manual(values = c("PP_trending_concordant" = "gray80", "PP_trending_discordant" ="#ffb8b8", "PM_trending_concordant" = "gray80", "PM_trending_discordant" ="#d4342a", "PS_trending_concordant" = "gray80", "PS_trending_discordant" ="#3b0a07", "indeterminate" = NA)) +
+  
+  geom_hline(yintercept = PS_mct, lty=2, color = "#3b0a07", size =0.6) + geom_hline(yintercept = PM_mct, lty=2, color = "#d4342a", size = 0.6) + geom_hline(yintercept = PP_mct, lty=2, color = "#ffb8b8", size = 0.6) +
+  
+  ylab("Percent variants incorrectly predicted")+ ggtitle("REVEL pathogenic intervals")+ theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(colour="black"), axis.ticks = element_line(color = "black"), axis.title.x=element_blank()) + theme(legend.position = "none")
+
+```
+
+
+REVEL benign intervals:
+```{r}
+REVEL_benign_dots = ggplot(REVEL_clinvar23_wg_summary_with_misclassified) + theme_classic() +scale_y_continuous(limits = c(0, 101)) + scale_x_continuous(limits = c(0, 140)) + 
+  
+  geom_point(data = REVEL_gene_specific_incorrect_prediction_supp9[!is.na(REVEL_gene_specific_incorrect_prediction_supp9$BP_class),],aes(x=control_variants_supporting_benign, y=percent_incorrectly_predicted_supporting_ben, label=Gene, color = BP_class), size = 0.8,  position=position_jitter(h=0.8,w=0.29)) +
+  
+  geom_point(data = REVEL_gene_specific_incorrect_prediction_supp9[!is.na(REVEL_gene_specific_incorrect_prediction_supp9$BM_class),],aes(x=control_variants_moderate_benign, y=percent_incorrectly_predicted_moderate_ben, label=Gene, color = BM_class), size = 0.8, position=position_jitter(h=0.4,w=0.33))  +
+  
+  scale_color_manual(values = c("BP_trending_concordant" = "gray80", "BP_trending_discordant" ="#b8bdff", "BM_trending_concordant" = "gray80", "BM_trending_discordant" ="#2137de", "indeterminate" = NA)) +
+  
+  geom_hline(yintercept = BM_mct, lty=2, color = "#2137de", size = 0.6) + geom_hline(yintercept = BP_mct, lty=2, color = "#b8bdff", size = 0.6) + 
+ 
+  ylab("")+ ggtitle("REVEL benign intervals")+ theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(colour="black"), axis.ticks = element_line(color = "black"), axis.title.x=element_blank()) + theme(legend.position = "none")
+
+```
+
+BayesDel pathogenic intervals:
+```{r}
+BayesDel_path_dots = ggplot(BayesDel_gene_specific_incorrect_prediction_supp10) + theme_classic() +scale_y_continuous(limits = c(0, 101)) + scale_x_continuous(limits = c(0, 140)) + 
+  
+  geom_point(data = BayesDel_gene_specific_incorrect_prediction_supp10[!is.na(BayesDel_gene_specific_incorrect_prediction_supp10$PP_class),],aes(x=control_variants_supporting_pathogenic, y=percent_incorrectly_predicted_supporting_path, color = PP_class), size = 0.8, position=position_jitter(h=0.8,w=0.29))+ 
+ 
+  geom_point(data = BayesDel_gene_specific_incorrect_prediction_supp10[!is.na(BayesDel_gene_specific_incorrect_prediction_supp10$PM_class),],aes(x=control_variants_moderate_pathogenic, y=percent_incorrectly_predicted_moderate_path, color = PM_class), size = 0.8, position=position_jitter(h=0.4,w=0.33))+  
+  
+  geom_point(data = BayesDel_gene_specific_incorrect_prediction_supp10[!is.na(BayesDel_gene_specific_incorrect_prediction_supp10$PS_class),],aes(x=control_variants_strong_pathogenic, y=percent_incorrectly_predicted_strong_path, color = PS_class), size = 0.8, position=position_jitter(h=0.21,w=0.031))+ 
+  
+  scale_color_manual(values = c("PP_trending_concordant" = "gray80", "PP_trending_discordant" ="#ffb8b8", "PM_trending_concordant" = "gray80", "PM_trending_discordant" ="#d4342a", "PS_trending_concordant" = "gray80", "PS_trending_discordant" ="#3b0a07", "indeterminate" = NA)) +
+  
+  geom_hline(yintercept = BD_PS_mct, lty=2, color = "#3b0a07", size =0.6) + geom_hline(yintercept = BD_PM_mct, lty=2, color = "#d4342a", size = 0.6) + geom_hline(yintercept = BD_PP_mct, lty=2, color = "#ffb8b8", size = 0.6) +
+  
+   xlab("Number of variants") + ylab("Percent variants incorrectly predicted")+ ggtitle("BayesDel pathogenic intervals")+ theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(colour="black"), axis.ticks = element_line(color = "black")) + theme(legend.position = "none")
+
+```
+
+BayesDel benign intervals:
+```{r}
+BayesDel_benign_dots = ggplot(BayesDel_clinvar23_wg_summary_with_misclassified) + theme_classic() +scale_y_continuous(limits = c(0, 101)) + scale_x_continuous(limits = c(0, 140)) + 
+  
+  geom_point(data = BayesDel_gene_specific_incorrect_prediction_supp10[!is.na(BayesDel_gene_specific_incorrect_prediction_supp10$BP_class),],aes(x=control_variants_supporting_benign, y=percent_incorrectly_predicted_supporting_ben, label=Gene, color = BP_class), size = 0.8,  position=position_jitter(h=0.8,w=0.29)) +
+  
+  geom_point(data = BayesDel_gene_specific_incorrect_prediction_supp10[!is.na(BayesDel_gene_specific_incorrect_prediction_supp10$BM_class),],aes(x=control_variants_moderate_benign, y=percent_incorrectly_predicted_moderate_ben, label=Gene, color = BM_class), size = 0.8, position=position_jitter(h=0.4,w=0.33))  +
+  
+  scale_color_manual(values = c("BP_trending_concordant" = "gray80", "BP_trending_discordant" ="#b8bdff", "BM_trending_concordant" = "gray80", "BM_trending_discordant" ="#2137de", "indeterminate" = NA)) +
+  
+  geom_hline(yintercept = BD_BM_mct, lty=2, color = "#2137de", size = 0.6) + geom_hline(yintercept = BD_BP_mct, lty=2, color = "#b8bdff", size = 0.6) + 
+ 
+   xlab("Number of variants") + ylab("")+ ggtitle("BayesDel benign intervals")+ theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(colour="black"), axis.ticks = element_line(color = "black"))+ theme(legend.position = "none")
+
+```
+
+
+Save the figure:
+```{r}
+Figure_3 = ggarrange(REVEL_path_dots, REVEL_benign_dots, BayesDel_path_dots, BayesDel_benign_dots, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+Figure_3
+ggsave("Figure.pdf", plot = Figure_3, height = 8, width = 10, dpi = 300)
+```
+```
+
