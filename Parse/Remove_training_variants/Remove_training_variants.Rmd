@@ -1,0 +1,43 @@
+---
+title: "test_file"
+author: "Malvika Tejura"
+date: "2023-12-07"
+output: html_document
+---
+
+```{r}
+#add relevant files and paths to places where needed 
+
+clinvar23 = read.csv('Clinvar 2023 dataset')
+
+#in github repo, file that marks the training variants (see methods from paper) 
+training_var = read_csv("~/Downloads/training_varaints_no_VUS_gcoords.csv", skip = 0)
+
+#filter on correct assembly
+training_var_hg19 = filter(training_var, training_var$Assembly == 'GRCh37')
+
+#missing values indicate training variant
+training_var_hg19 = training_var_hg19 %>% mutate(training_var = if_else(is.na(hg19_chr) == 'TRUE', 'training_var', 'not_training_var'))
+
+#filter on training variants 
+training_var_hg19 = filter(training_var_hg19, training_var_hg19$training_var == 'training_var')
+
+#rename columns for easier join
+colnames(training_var_hg19)[13] = 'Chr'
+colnames(training_var_hg19)[16] = 'Ref'
+colnames(training_var_hg19)[17] = 'Alt'
+
+#left join on Chr, Start, Ref and Alt with the Clinvar 2023 dataset 
+no_train_var = clinvar23 %>% left_join(training_var_hg19, by= c('Chr','Start','Ref','Alt'))
+
+#remove training variants 
+no_train_var2 = filter(no_train_var, is.na(no_train_var$training_var) == 'TRUE')
+
+#subset for a smaller file 
+not_train_var3 = subset(no_train_var2, select = c(Chr, Start, End, Ref, Alt, REVEL, BayesDel_noAF_score, genome_AF, exome_AF, Otherinfo11, Stars, OG_Genename, GeneID,Significance, clnvc, Variant_type, Gene))
+
+#write file to csv
+write.csv(not_train_var3, "Clinvar 2023 dataset without training variants", row.names=FALSE)
+
+
+```
