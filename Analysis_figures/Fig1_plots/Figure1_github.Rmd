@@ -73,7 +73,7 @@ all_snv_revel = read_csv('Supplementary Table 5')
 
 REVEL_hist = function(clinvar_df, all_snv_df, height, gene) {
   
-  phist = gghistogram(clinvar_df, x = 'REVEL_score', fill = 'Significance', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text=element_text(size=16), axis.title.x =element_blank())+ geom_vline(xintercept = 0.932, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.773, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.644, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = 0.290, linetype = 'dashed', color = '#0033CC',size = 1)+ geom_vline(xintercept = 0.183, linetype = 'longdash',color = '#0033CC',size = 1) + geom_vline(xintercept = 0.016, linetype = 'twodash',color = '#0033CC',size = 1) +rremove("x.axis") + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(0,1)) + ggtitle('REVEL histogram',gene) + ylab('Variant count')
+  phist = gghistogram(clinvar_df, x = 'REVEL_score', fill = 'clnsig', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text=element_text(size=16), axis.title.x =element_blank())+ geom_vline(xintercept = 0.932, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.773, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.644, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = 0.290, linetype = 'dashed', color = '#0033CC',size = 1)+ geom_vline(xintercept = 0.183, linetype = 'longdash',color = '#0033CC',size = 1) + geom_vline(xintercept = 0.016, linetype = 'twodash',color = '#0033CC',size = 1) +rremove("x.axis") + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(0,1)) + ggtitle('REVEL histogram',gene) + ylab('Variant count')
   phist
   
   #add all snv dataframe here
@@ -86,30 +86,30 @@ REVEL_hist = function(clinvar_df, all_snv_df, height, gene) {
   aligned_plots
   cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
   cx = cx
-    
+  
   return(cx)
 }
 
-REVEL_clinvar = REVEL_hist(clinvar_wg, all_snv_revel, 2500, 'REVEL genome-wide')
+REVEL_clinvar = REVEL_hist(clinvar_wg, all_snv_revel, 2500, 'REVEL_genome-wide')
 
 
 #BayesDel
 
 BayesDel_hist = function(clinvar_df, all_snv_df, height, gene) {
-    phist = gghistogram(clinvar_df, x = 'BayesDel_nsfp33a_noAF', fill = 'Significance', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA, bins = 30) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text =element_text(size=16), axis.title.x=element_blank())+ geom_vline(xintercept = 0.5, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.27, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.13, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = -0.36, linetype = 'longdash', color = '#0033CC',size = 1)+ geom_vline(xintercept = -0.18, linetype = 'dashed',color = '#0033CC',size = 1) + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + ggtitle('BayesDel histogram',gene) + ylab('Variant count')
+  phist = gghistogram(clinvar_df, x = 'BayesDel_nsfp33a_noAF', fill = 'clnsig', rug = FALSE,position = 'stack', palette = c('Benign' = 'royalblue3', 'Likely_benign' = 'steelblue1','Likely_pathogenic' = 'coral', 'Pathogenic' = 'firebrick3','Pathogenic/Likely_pathogenic' = 'coral', 'Benign/Likely_benign' = 'steelblue1'), alpha = 0.9, color = NA, bins = 30) + theme_half_open(11, rel_small = 1) + theme(legend.position = "none", axis.text =element_text(size=16), axis.title.x=element_blank())+ geom_vline(xintercept = 0.5, linetype = 'twodash', color = '#990000',size = 1) + geom_vline(xintercept = 0.27, linetype = 'longdash', color = '#990000',size = 1) + geom_vline(xintercept = 0.13, linetype = 'dashed',color = '#990000',size = 1 )+ geom_vline(xintercept = -0.36, linetype = 'longdash', color = '#0033CC',size = 1)+ geom_vline(xintercept = -0.18, linetype = 'dashed',color = '#0033CC',size = 1) + rremove("xlab") + rremove("x.text") + rremove("x.ticks")+scale_y_continuous(expand = c(0,0), limits = c(0,height))+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + ggtitle('BayesDel histogram',gene) + ylab('Variant count')
   phist 
   
   pdensity = ggdensity(all_snv_df, x = 'BayesDel_nsfp33a_noAF', fill = '#999999', color = NA) + theme(legend.position = "none", axis.text=element_text(size=16))+
     scale_y_continuous(expand = expansion(mult = c(0, 0)), position = "right")+scale_x_continuous(expand = c(0,0), limits = c(-1.30,0.76)) + labs(x = 'BayesDel score', y = 'All SNV density')
   pdensity
-
-aligned_plots <- suppressWarnings(align_plots(phist,pdensity, align="hv", axis="tblr"))  
-aligned_plots
-cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
-cx
-
-return(cx)
-
+  
+  aligned_plots <- suppressWarnings(align_plots(phist,pdensity, align="hv", axis="tblr"))  
+  aligned_plots
+  cx = ggdraw(aligned_plots[[2]]) + draw_plot(aligned_plots[[1]])
+  cx
+  
+  return(cx)
+  
 }
 
 BayesDel_clinvar = BayesDel_hist(clinvar_wg, all_snv_bd, 2500, 'BayesDel genome-wide')
