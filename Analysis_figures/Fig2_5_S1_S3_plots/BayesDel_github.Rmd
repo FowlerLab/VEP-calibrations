@@ -53,14 +53,14 @@ clinvar23$BayesDel_noAF_score = as.numeric(as.character(clinvar23$BayesDel_noAF_
 
 #for clivnar_wg dataframe 
 
-path_missclassified = function(df) {
+path_incorrect = function(df) {
   pathogenic = nrow(filter(df, df$clnsig == 'Pathogenic' | df$clnsig == 'Likely_pathogenic' | df$clnsig == 'Pathogenic/Likely_pathogenic'))
   benign = nrow(filter(df, df$clnsig == 'Benign' | df$clnsig == 'Likely_benign' | df$clnsig == 'Benign/Likely_benign'))
   proportion = benign/(pathogenic + benign)
   return(proportion)
 }
 
-ben_missclassified = function(df) {
+ben_incorrect = function(df) {
   pathogenic = nrow(filter(df, df$clnsig == 'Pathogenic' | df$clnsig == 'Likely_pathogenic' | df$clnsig == 'Pathogenic/Likely_pathogenic'))
   benign = nrow(filter(df, df$clnsig == 'Benign' | df$clnsig == 'Likely_benign' | df$clnsig == 'Benign/Likely_benign'))
   proportion = pathogenic/(benign + pathogenic)
@@ -69,119 +69,119 @@ ben_missclassified = function(df) {
 
 #for clinvar23 dataframe 
 
-path_missclassified_2 = function(df) {
+path_incorrect_2 = function(df) {
   pathogenic = nrow(filter(df, df$Significance == 'Pathogenic' | df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
   benign = nrow(filter(df, df$Significance == 'Benign' | df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
   proportion = benign/(pathogenic + benign)
   return(proportion)
 }
 
-ben_missclassified_2 = function(df) {
+ben_incorrect_2 = function(df) {
   pathogenic = nrow(filter(df, df$Significance == 'Pathogenic' | df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
   benign = nrow(filter(df, df$Significance == 'Benign' | df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
   proportion = pathogenic/(benign + pathogenic)
   return(proportion)
 }
 
-#find the percentage of misclassified variants in each bin from the clinvar_wg dataset for BayesDel. This is the incorrect prediction tolerance. Also calculate the number of variants needed in each interval to be concordant or discordant using the binomial theorem
+#find the percentage of incorrect variants in each bin from the clinvar_wg dataset for BayesDel. This is the incorrect prediction tolerance. Also calculate the number of variants needed in each interval to be concordant or discordant using the binomial theorem
   
-strong_pathogenic_percentage_bd = path_missclassified(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF >= 0.5))
+strong_pathogenic_percentage_bd = path_incorrect(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF >= 0.5))
 strong_path_x_pass_bd = ceiling(log(0.2)/log(1-strong_pathogenic_percentage_bd))
 strong_path_x_fail_bd = ceiling(log(0.2)/log(strong_pathogenic_percentage_bd))
 
-moderate_pathogenic_percentage_bd = path_missclassified(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF < 0.5 & clinvar_wg$BayesDel_nsfp33a_noAF >= 0.27))
+moderate_pathogenic_percentage_bd = path_incorrect(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF < 0.5 & clinvar_wg$BayesDel_nsfp33a_noAF >= 0.27))
 moderate_path_x_pass_bd = ceiling(log(0.2)/log(1-moderate_pathogenic_percentage_bd))
 moderate_path_x_fail_bd = ceiling(log(0.2)/log(moderate_pathogenic_percentage_bd))
 
-supporting_pathogenic_percentage_bd = path_missclassified(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF < 0.27 & clinvar_wg$BayesDel_nsfp33a_noAF >= 0.13))
+supporting_pathogenic_percentage_bd = path_incorrect(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF < 0.27 & clinvar_wg$BayesDel_nsfp33a_noAF >= 0.13))
 supporting_path_x_pass_bd = ceiling(log(0.2)/log(1-supporting_pathogenic_percentage_bd))
 supporting_path_x_fail_bd = ceiling(log(0.2)/log(supporting_pathogenic_percentage_bd))
 
-moderate_benign_percentage_bd = ben_missclassified(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF <= -0.36))
+moderate_benign_percentage_bd = ben_incorrect(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF <= -0.36))
 moderate_ben_x_pass_bd = ceiling(log(0.2)/log(1-moderate_benign_percentage_bd))
 moderate_ben_x_fail_bd = ceiling(log(0.2)/log(moderate_benign_percentage_bd))
 
-supporting_benign_percentage_bd = ben_missclassified(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF > -0.36 & clinvar_wg$BayesDel_nsfp33a_noAF <= -0.18))
+supporting_benign_percentage_bd = ben_incorrect(filter(clinvar_wg, clinvar_wg$BayesDel_nsfp33a_noAF > -0.36 & clinvar_wg$BayesDel_nsfp33a_noAF <= -0.18))
 supporting_ben_x_pass_bd = ceiling(log(0.2)/log(1-supporting_benign_percentage_bd))
 supporting_ben_x_fail_bd = ceiling(log(0.2)/log(supporting_benign_percentage_bd))
 
 #functions to determine if a certain interval in a gene is concordant or discordant depending on the incorrect prediction percentage
 
-pass_fail_path = function(df,bin) {
-  p_f = path_missclassified_2(df)
+conc_disc_path = function(df,bin) {
+  p_f = path_incorrect_2(df)
   if (p_f > bin) {
-    pass_fail = 'Discordant'
+    conc_disc = 'Discordant'
   } else if (p_f <= bin) {
-    pass_fail = 'Concordant'
+    conc_disc = 'Concordant'
   }
-  df$pass_fail = pass_fail
+  df$conc_disc = conc_disc
   df$control_variants = nrow(df)
-  df$misclassified = nrow(filter(df, df$Significance == 'Benign'| df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
+  df$incorrect = nrow(filter(df, df$Significance == 'Benign'| df$Significance == 'Likely_benign' | df$Significance == 'Benign/Likely_benign'))
   return(df)
 }
 
-pass_fail_ben = function(df,bin) {
-  p_f = ben_missclassified_2(df)
+conc_disc_ben = function(df,bin) {
+  p_f = ben_incorrect_2(df)
   if (p_f > bin) {
-    pass_fail = 'Discordant'
+    conc_disc = 'Discordant'
   } else if (p_f <= bin) {
-    pass_fail = 'Concordant'
+    conc_disc = 'Concordant'
   }
-  df$pass_fail = pass_fail
+  df$conc_disc = conc_disc
   df$control_variants = nrow(df)
-  df$misclassified = nrow(filter(df, df$Significance == 'Pathogenic'| df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
+  df$incorrect = nrow(filter(df, df$Significance == 'Pathogenic'| df$Significance == 'Likely_pathogenic' | df$Significance == 'Pathogenic/Likely_pathogenic'))
   return(df)
 }
 
 #create dataframes for each evidence strength interval with a pass/fail column depending on the intervals incorrect prediction percentage (pass = incorrect prediction percentage <= incorrect prediction tolerance, fail = incorrect prediction percentage > incorrect prediction tolerance)
 
 strong_pathogenic_bd = filter(clinvar23, clinvar23$BayesDel_noAF_score >= 0.5)
-strong_pathogenic_bd = strong_pathogenic_bd %>% group_by(Gene) %>% group_modify(~pass_fail_path(.,strong_pathogenic_percentage_bd))
-colnames(strong_pathogenic_bd)[18] = 'pass_fail_strong_pathogenic'
+strong_pathogenic_bd = strong_pathogenic_bd %>% group_by(Gene) %>% group_modify(~conc_disc_path(.,strong_pathogenic_percentage_bd))
+colnames(strong_pathogenic_bd)[18] = 'conc_disc_strong_pathogenic'
 colnames(strong_pathogenic_bd)[19] = 'control_variants_strong_pathogenic'
-colnames(strong_pathogenic_bd)[20] = 'misclassified_variants_strong_pathogenic'
+colnames(strong_pathogenic_bd)[20] = 'incorrect_variants_strong_pathogenic'
 
 #moderate pathogenic
 moderate_pathogenic_bd = filter(clinvar23, clinvar23$BayesDel_noAF_score < 0.5 & clinvar23$BayesDel_noAF_score >= 0.27)
-moderate_pathogenic_bd = moderate_pathogenic_bd %>% group_by(Gene) %>% group_modify(~pass_fail_path(.,moderate_pathogenic_percentage_bd))
-colnames(moderate_pathogenic_bd)[18] = 'pass_fail_moderate_pathogenic'
+moderate_pathogenic_bd = moderate_pathogenic_bd %>% group_by(Gene) %>% group_modify(~conc_disc_path(.,moderate_pathogenic_percentage_bd))
+colnames(moderate_pathogenic_bd)[18] = 'conc_disc_moderate_pathogenic'
 colnames(moderate_pathogenic_bd)[19] = 'control_variants_moderate_pathogenic'
-colnames(moderate_pathogenic_bd)[20] = 'misclassified_variants_moderate_pathogenic'
+colnames(moderate_pathogenic_bd)[20] = 'incorrect_variants_moderate_pathogenic'
 
 #supporting pathogenic
 supporting_pathogenic_bd = filter(clinvar23, clinvar23$BayesDel_noAF_score < 0.27 & clinvar23$BayesDel_noAF_score >= 0.13)
-supporting_pathogenic_bd = supporting_pathogenic_bd %>% group_by(Gene) %>% group_modify(~pass_fail_path(.,supporting_pathogenic_percentage_bd))
-colnames(supporting_pathogenic_bd)[18] = 'pass_fail_supporting_pathogenic'
+supporting_pathogenic_bd = supporting_pathogenic_bd %>% group_by(Gene) %>% group_modify(~conc_disc_path(.,supporting_pathogenic_percentage_bd))
+colnames(supporting_pathogenic_bd)[18] = 'conc_disc_supporting_pathogenic'
 colnames(supporting_pathogenic_bd)[19] = 'control_variants_supporting_pathogenic'
-colnames(supporting_pathogenic_bd)[20] = 'misclassified_variants_supporting_pathogenic'
+colnames(supporting_pathogenic_bd)[20] = 'incorrect_variants_supporting_pathogenic'
 
 #moderate benign
 
 moderate_benign_bd = filter(clinvar23,clinvar23$BayesDel_noAF_score <= -0.36)
-moderate_benign_bd = moderate_benign_bd %>% group_by(Gene) %>% group_modify((~pass_fail_ben(.,moderate_benign_percentage_bd)))
-colnames(moderate_benign_bd)[18] = 'pass_fail_moderate_benign'
+moderate_benign_bd = moderate_benign_bd %>% group_by(Gene) %>% group_modify((~conc_disc_ben(.,moderate_benign_percentage_bd)))
+colnames(moderate_benign_bd)[18] = 'conc_disc_moderate_benign'
 colnames(moderate_benign_bd)[19] = 'control_variants_moderate_benign'
-colnames(moderate_benign_bd)[20] = 'misclassified_variants_moderate_benign'
+colnames(moderate_benign_bd)[20] = 'incorrect_variants_moderate_benign'
 
 #supporting benign
 
 supporting_benign_bd = filter(clinvar23, clinvar23$BayesDel_noAF_score > -0.36 & clinvar23$BayesDel_noAF_score <= -0.18)
-supporting_benign_bd = supporting_benign_bd %>% group_by(Gene) %>% group_modify((~pass_fail_ben(.,supporting_benign_percentage_bd)))
-colnames(supporting_benign_bd)[18] = 'pass_fail_supporting_benign'
+supporting_benign_bd = supporting_benign_bd %>% group_by(Gene) %>% group_modify((~conc_disc_ben(.,supporting_benign_percentage_bd)))
+colnames(supporting_benign_bd)[18] = 'conc_disc_supporting_benign'
 colnames(supporting_benign_bd)[19] = 'control_variants_supporting_benign'
-colnames(supporting_benign_bd)[20] = 'misclassified_variants_supporting_benign'
+colnames(supporting_benign_bd)[20] = 'incorrect_variants_supporting_benign'
 
 #create a new column that annotates whether each variant is in an interval that is concordant,discordant or indeterminate (insufficient evidence). This takes into account how many control variants are in each interval and whether that meets the required number of control variants needed for concordance or discordance. It is also takes into account the incorrect prediction percentage.
 
-strong_pathogenic_bd$pr_variant_pass_strong_path = ifelse(strong_pathogenic_bd$pass_fail_strong_pathogenic == 'Concordant' & strong_pathogenic_bd$control_variants_strong_pathogenic >= strong_path_x_pass_bd, 'Concordant', ifelse(strong_pathogenic_bd$pass_fail_strong_pathogenic == 'Discordant' & strong_pathogenic_bd$control_variants_strong_pathogenic >= strong_path_x_fail_bd,'Discordant','Insufficient variants'))
+strong_pathogenic_bd$pr_variant_pass_strong_path = ifelse(strong_pathogenic_bd$conc_disc_strong_pathogenic == 'Concordant' & strong_pathogenic_bd$control_variants_strong_pathogenic >= strong_path_x_pass_bd, 'Concordant', ifelse(strong_pathogenic_bd$conc_disc_strong_pathogenic == 'Discordant' & strong_pathogenic_bd$control_variants_strong_pathogenic >= strong_path_x_fail_bd,'Discordant','Insufficient variants'))
 
-moderate_pathogenic_bd$pr_variant_pass_moderate_path = ifelse(moderate_pathogenic_bd$pass_fail_moderate_pathogenic == 'Concordant' & moderate_pathogenic_bd$control_variants_moderate_pathogenic >= moderate_path_x_pass_bd, 'Concordant', ifelse(moderate_pathogenic_bd$pass_fail_moderate_pathogenic == 'Discordant' & moderate_pathogenic_bd$control_variants_moderate_pathogenic >= moderate_path_x_fail_bd,'Discordant','Insufficient variants'))
+moderate_pathogenic_bd$pr_variant_pass_moderate_path = ifelse(moderate_pathogenic_bd$conc_disc_moderate_pathogenic == 'Concordant' & moderate_pathogenic_bd$control_variants_moderate_pathogenic >= moderate_path_x_pass_bd, 'Concordant', ifelse(moderate_pathogenic_bd$conc_disc_moderate_pathogenic == 'Discordant' & moderate_pathogenic_bd$control_variants_moderate_pathogenic >= moderate_path_x_fail_bd,'Discordant','Insufficient variants'))
 
-supporting_pathogenic_bd$pr_variant_pass_supporting_path = ifelse(supporting_pathogenic_bd$pass_fail_supporting_pathogenic == 'Concordant' & supporting_pathogenic_bd$control_variants_supporting_pathogenic >= supporting_path_x_pass_bd, 'Concordant', ifelse(supporting_pathogenic_bd$pass_fail_supporting_pathogenic == 'Discordant' & supporting_pathogenic_bd$control_variants_supporting_pathogenic >= supporting_path_x_fail_bd,'Discordant','Insufficient variants'))
+supporting_pathogenic_bd$pr_variant_pass_supporting_path = ifelse(supporting_pathogenic_bd$conc_disc_supporting_pathogenic == 'Concordant' & supporting_pathogenic_bd$control_variants_supporting_pathogenic >= supporting_path_x_pass_bd, 'Concordant', ifelse(supporting_pathogenic_bd$conc_disc_supporting_pathogenic == 'Discordant' & supporting_pathogenic_bd$control_variants_supporting_pathogenic >= supporting_path_x_fail_bd,'Discordant','Insufficient variants'))
 
-supporting_benign_bd$pr_variant_pass_supporting_ben = ifelse(supporting_benign_bd$pass_fail_supporting_benign == 'Concordant' & supporting_benign_bd$control_variants_supporting_benign >= supporting_ben_x_pass_bd, 'Concordant', ifelse(supporting_benign_bd$pass_fail_supporting_benign == 'Discordant' & supporting_benign_bd$control_variants_supporting_benign >= supporting_ben_x_fail_bd,'Discordant','Insufficient variants'))
+supporting_benign_bd$pr_variant_pass_supporting_ben = ifelse(supporting_benign_bd$conc_disc_supporting_benign == 'Concordant' & supporting_benign_bd$control_variants_supporting_benign >= supporting_ben_x_pass_bd, 'Concordant', ifelse(supporting_benign_bd$conc_disc_supporting_benign == 'Discordant' & supporting_benign_bd$control_variants_supporting_benign >= supporting_ben_x_fail_bd,'Discordant','Insufficient variants'))
 
-moderate_benign_bd$pr_variant_pass_moderate_ben = ifelse(moderate_benign_bd$pass_fail_moderate_benign == 'Concordant' & moderate_benign_bd$control_variants_moderate_benign >= moderate_ben_x_pass_bd, 'Concordant', ifelse(moderate_benign_bd$pass_fail_moderate_benign == 'Discordant' & moderate_benign_bd$control_variants_moderate_benign >= moderate_ben_x_fail_bd,'Discordant','Insufficient variants'))
+moderate_benign_bd$pr_variant_pass_moderate_ben = ifelse(moderate_benign_bd$conc_disc_moderate_benign == 'Concordant' & moderate_benign_bd$control_variants_moderate_benign >= moderate_ben_x_pass_bd, 'Concordant', ifelse(moderate_benign_bd$conc_disc_moderate_benign == 'Discordant' & moderate_benign_bd$control_variants_moderate_benign >= moderate_ben_x_fail_bd,'Discordant','Insufficient variants'))
 
 #create dataframes for each interval, keeping only unique genes
 
@@ -206,26 +206,26 @@ final_wg_bd = df_list_bd %>% reduce(full_join, by= c('Gene','GeneID','Chr'))
 
 #subset the final dataframe to select for columns needed in downstream analyses
 
-wg_bd = subset(final_wg_bd, select = c(Gene, Chr, GeneID,pass_fail_strong_pathogenic,pass_fail_moderate_pathogenic,pass_fail_supporting_pathogenic,pass_fail_supporting_benign,pass_fail_moderate_benign, control_variants_strong_pathogenic, control_variants_moderate_pathogenic, control_variants_supporting_pathogenic,control_variants_moderate_benign, control_variants_supporting_benign,misclassified_variants_strong_pathogenic, misclassified_variants_moderate_pathogenic, misclassified_variants_supporting_pathogenic,misclassified_variants_moderate_benign, misclassified_variants_supporting_benign,pr_variant_pass_strong_path,pr_variant_pass_moderate_path,pr_variant_pass_supporting_path,pr_variant_pass_moderate_ben, pr_variant_pass_supporting_ben))
+wg_bd = subset(final_wg_bd, select = c(Gene, Chr, GeneID,conc_disc_strong_pathogenic,conc_disc_moderate_pathogenic,conc_disc_supporting_pathogenic,conc_disc_supporting_benign,conc_disc_moderate_benign, control_variants_strong_pathogenic, control_variants_moderate_pathogenic, control_variants_supporting_pathogenic,control_variants_moderate_benign, control_variants_supporting_benign,incorrect_variants_strong_pathogenic, incorrect_variants_moderate_pathogenic, incorrect_variants_supporting_pathogenic,incorrect_variants_moderate_benign, incorrect_variants_supporting_benign,pr_variant_pass_strong_path,pr_variant_pass_moderate_path,pr_variant_pass_supporting_path,pr_variant_pass_moderate_ben, pr_variant_pass_supporting_ben))
 
 # calculate the total number of control variants across the gene in all bins
 wg_bd = wg_bd %>%  mutate (total_control_variants = rowSums(select(., control_variants_strong_pathogenic,control_variants_moderate_pathogenic, control_variants_supporting_pathogenic,control_variants_supporting_benign, control_variants_moderate_benign), na.rm = TRUE))
 
 #to make different plots, taking into account all concordance or discordance regardless of control variants
 
-summary_1_bd = data.frame(table(wg_bd$pass_fail_strong_pathogenic))
+summary_1_bd = data.frame(table(wg_bd$conc_disc_strong_pathogenic))
 summary_1_bd$Condition = 'Strong Pathogenic'
 
-summary_2_bd = data.frame(table(wg_bd$pass_fail_moderate_pathogenic))
+summary_2_bd = data.frame(table(wg_bd$conc_disc_moderate_pathogenic))
 summary_2_bd$Condition = 'Moderate Pathogenic'
 
-summary_3_bd = data.frame(table(wg_bd$pass_fail_supporting_pathogenic))
+summary_3_bd = data.frame(table(wg_bd$conc_disc_supporting_pathogenic))
 summary_3_bd$Condition = 'Supporting Pathogenic'
 
-summary_6_bd = data.frame(table(wg_bd$pass_fail_moderate_benign))
+summary_6_bd = data.frame(table(wg_bd$conc_disc_moderate_benign))
 summary_6_bd$Condition = 'Moderate Benign'
 
-summary_7_bd = data.frame(table(wg_bd$pass_fail_supporting_benign))
+summary_7_bd = data.frame(table(wg_bd$conc_disc_supporting_benign))
 summary_7_bd$Condition = 'Supporting Benign'
 
 summary_bd = (rbind(summary_1_bd,summary_2_bd,summary_3_bd,summary_6_bd,summary_7_bd))
@@ -234,8 +234,8 @@ summary_bd = (rbind(summary_1_bd,summary_2_bd,summary_3_bd,summary_6_bd,summary_
 
 strong_pathogenic_pr_bd = filter(wg_bd, wg_bd$control_variants_strong_pathogenic >= strong_path_x_pass_bd)
 strong_pathogenic_pr_bd_2 = filter(wg_bd, wg_bd$control_variants_strong_pathogenic >= strong_path_x_fail_bd)
-strong_pathogenic_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_strong_pathogenic >= strong_path_x_pass_bd & wg_bd$pass_fail_strong_pathogenic == 'Concordant')
-strong_pathogenic_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_strong_pathogenic >= strong_path_x_fail_bd  & wg_bd$pass_fail_strong_pathogenic == 'Discordant')
+strong_pathogenic_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_strong_pathogenic >= strong_path_x_pass_bd & wg_bd$conc_disc_strong_pathogenic == 'Concordant')
+strong_pathogenic_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_strong_pathogenic >= strong_path_x_fail_bd  & wg_bd$conc_disc_strong_pathogenic == 'Discordant')
 summary_pr_1_bd = data.frame(c('Concordant','Discordant'),c(nrow(strong_pathogenic_pr_pass_bd), nrow(strong_pathogenic_pr_fail_bd)))
 summary_pr_1_bd$Condition = 'Strong Pathogenic'
 colnames(summary_pr_1_bd)[1] = 'Var1'
@@ -243,8 +243,8 @@ colnames(summary_pr_1_bd)[2] = 'Freq'
 
 moderate_pathogenic_pr_bd = filter(wg_bd, wg_bd$control_variants_moderate_pathogenic >= moderate_path_x_pass_bd)
 moderate_pathogenic_pr_bd_2 = filter(wg_bd, wg_bd$control_variants_moderate_pathogenic >= moderate_path_x_fail_bd)
-moderate_pathogenic_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_moderate_pathogenic >= moderate_path_x_pass_bd & wg_bd$pass_fail_moderate_pathogenic == 'Concordant')
-moderate_pathogenic_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_moderate_pathogenic >= moderate_path_x_fail_bd & wg_bd$pass_fail_moderate_pathogenic == 'Discordant')
+moderate_pathogenic_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_moderate_pathogenic >= moderate_path_x_pass_bd & wg_bd$conc_disc_moderate_pathogenic == 'Concordant')
+moderate_pathogenic_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_moderate_pathogenic >= moderate_path_x_fail_bd & wg_bd$conc_disc_moderate_pathogenic == 'Discordant')
 summary_pr_2_bd = data.frame(c('Concordant','Discordant'),c(nrow(moderate_pathogenic_pr_pass_bd), nrow(moderate_pathogenic_pr_fail_bd)))
 summary_pr_2_bd$Condition = 'Moderate Pathogenic'
 colnames(summary_pr_2_bd)[1] = 'Var1'
@@ -252,8 +252,8 @@ colnames(summary_pr_2_bd)[2] = 'Freq'
 
 supporting_pathogenic_pr_bd = filter(wg_bd, wg_bd$control_variants_supporting_pathogenic >= supporting_path_x_pass_bd)
 supporting_pathogenic_pr_bd_2 = filter(wg_bd, wg_bd$control_variants_supporting_pathogenic >= supporting_path_x_fail_bd)
-supporting_pathogenic_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_supporting_pathogenic >= supporting_path_x_pass_bd & wg_bd$pass_fail_supporting_pathogenic == 'Concordant')
-supporting_pathogenic_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_supporting_pathogenic >= supporting_path_x_fail_bd & wg_bd$pass_fail_supporting_pathogenic == 'Discordant')
+supporting_pathogenic_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_supporting_pathogenic >= supporting_path_x_pass_bd & wg_bd$conc_disc_supporting_pathogenic == 'Concordant')
+supporting_pathogenic_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_supporting_pathogenic >= supporting_path_x_fail_bd & wg_bd$conc_disc_supporting_pathogenic == 'Discordant')
 summary_pr_3_bd = data.frame(c('Concordant','Discordant'),c(nrow(supporting_pathogenic_pr_pass_bd), nrow(supporting_pathogenic_pr_fail_bd)))
 summary_pr_3_bd$Condition = 'Supporting Pathogenic'
 colnames(summary_pr_3_bd)[1] = 'Var1'
@@ -261,8 +261,8 @@ colnames(summary_pr_3_bd)[2] = 'Freq'
 
 moderate_benign_pr_bd = filter(wg_bd, wg_bd$control_variants_moderate_benign >= moderate_ben_x_pass_bd)
 moderate_benign_pr_bd_2 = filter(wg_bd, wg_bd$control_variants_moderate_benign >= moderate_ben_x_fail_bd)
-moderate_benign_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_moderate_benign >= moderate_ben_x_pass_bd & wg_bd$pass_fail_moderate_benign == 'Concordant')
-moderate_benign_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_moderate_benign >= moderate_ben_x_fail_bd & wg_bd$pass_fail_moderate_benign == 'Discordant')
+moderate_benign_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_moderate_benign >= moderate_ben_x_pass_bd & wg_bd$conc_disc_moderate_benign == 'Concordant')
+moderate_benign_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_moderate_benign >= moderate_ben_x_fail_bd & wg_bd$conc_disc_moderate_benign == 'Discordant')
 summary_pr_6_bd = data.frame(c('Concordant','Discordant'),c(nrow(moderate_benign_pr_pass_bd), nrow(moderate_benign_pr_fail_bd)))
 summary_pr_6_bd$Condition = 'Moderate Benign'
 colnames(summary_pr_6_bd)[1] = 'Var1'
@@ -271,8 +271,8 @@ colnames(summary_pr_6_bd)[2] = 'Freq'
 
 supporting_benign_pr_bd = filter(wg_bd, wg_bd$control_variants_supporting_benign >= supporting_ben_x_pass_bd)
 supporting_benign_pr_bd_2 = filter(wg_bd, wg_bd$control_variants_supporting_benign >= supporting_ben_x_fail_bd)
-supporting_benign_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_supporting_benign >= supporting_ben_x_pass_bd & wg_bd$pass_fail_supporting_benign == 'Concordant')
-supporting_benign_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_supporting_benign >= supporting_ben_x_fail_bd & wg_bd$pass_fail_supporting_benign == 'Discordant')
+supporting_benign_pr_pass_bd = filter(wg_bd, wg_bd$control_variants_supporting_benign >= supporting_ben_x_pass_bd & wg_bd$conc_disc_supporting_benign == 'Concordant')
+supporting_benign_pr_fail_bd = filter(wg_bd, wg_bd$control_variants_supporting_benign >= supporting_ben_x_fail_bd & wg_bd$conc_disc_supporting_benign == 'Discordant')
 summary_pr_7_bd = data.frame(c('Concordant','Discordant'),c(nrow(supporting_benign_pr_pass_bd), nrow(supporting_benign_pr_fail_bd)))
 summary_pr_7_bd$Condition = 'Supporting Benign'
 colnames(summary_pr_7_bd)[1] = 'Var1'
@@ -440,7 +440,7 @@ VUS_merge_x_bd = subset(VUS_merge_bd, select = c(Chr.x, Start, End, Ref, Alt, RE
 
 calc_bd <- function(df) {
   df <- df %>%
-    mutate(
+    dplyr::mutate(
       concordant_1 = if_else(pr_variant_pass_strong_path == 'Concordant', str_path_VUS_num, 0),
       concordant_2 = if_else(pr_variant_pass_moderate_path == 'Concordant', mod_path_VUS_num, 0),
       concordant_3 = if_else(pr_variant_pass_supporting_path == 'Concordant', supp_path_VUS_num, 0),
@@ -463,7 +463,7 @@ calc_bd <- function(df) {
   return(df)
 }
 
-cc_bd = VUS_merge_x_bd %>% mutate(calc_bd(.))
+cc_bd = VUS_merge_x_bd %>% dplyr::mutate(calc_bd(.))
 
 cc_bd$Concordant <- rowSums(cc_bd[, c("concordant_1", "concordant_2", "concordant_3", "concordant_4", "concordant_5")], na.rm = TRUE)
 
@@ -517,6 +517,4 @@ plot_2_bd
 plot_3_bd
 
 dev.off()
-
-
 ```
