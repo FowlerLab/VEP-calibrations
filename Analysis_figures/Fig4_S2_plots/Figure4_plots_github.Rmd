@@ -20,6 +20,14 @@ library(ggpubr)
 
 clinvar23 = read.csv('Clinvar 2023 Dataset Supplementary Table 2 or Clinvar 2023 Dataset without training variants Supplementary Table 3')
 
+#change ClinVar significance labels
+
+clinvar23$Significance[clinvar23$Significance=="Benign/Likely_benign"]<-"Likely_benign"
+
+clinvar23$Significance[clinvar23$Significance=="Pathogenic/Likely_pathogenic"]<-"Likely_pathogenic"
+
+#channge datatype to make it a continuous value for histograms
+
 clinvar23$REVEL = as.numeric(as.character(clinvar23$REVEL))
 
 clinvar23$BayesDel_noAF_score = as.numeric(as.character(clinvar23$BayesDel_noAF_score))
