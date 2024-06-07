@@ -24,7 +24,7 @@
 
 ## Parse
 
-The parse folder contains scripts that filter the original ClinVar download annotated with predictor scores using Annovar. Scripts produce intermediate .csv files for further filtering. The final script filtering scripts create the ClinVar 2023 Dataset, the ClinVar 2023 dataset without training variants, and the ClinVar VUS dataset. The original annovar annotate ClinVar file with predictor scores can be found here: https://zenodo.org/records/11256843  
+The parse folder contains scripts that filter the original ClinVar download annotated with predictor scores using Annovar. Scripts produce intermediate .csv files for further filtering. The final script filtering scripts create the ClinVar 2023 Dataset, the ClinVar 2023 dataset without training variants, and the ClinVar VUS dataset. The original annovar annotate ClinVar file with predictor scores can be found here: https://zenodo.org/records/10851600 
 
   ### Annovar parse
   
